@@ -144,6 +144,8 @@ class User < ApplicationRecord
 
   def admin? = has_role?(:admin) || has_role?(:super_admin)
 
+  def can_review? = admin? || has_role?(:project_certifier)
+
   def seller? = ShopItem::HackClubberItem.exists?(user_id: id)
 
   def can_see_deleted_devlogs? = admin? || has_role?(:fraud_dept)

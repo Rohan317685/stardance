@@ -221,6 +221,10 @@ class Project < ApplicationRecord
     event :reject do
       transitions from: :under_review, to: :rejected
     end
+
+    event :return_for_changes do
+      transitions from: :under_review, to: :submitted
+    end
   end
 
   def shipping_requirements
