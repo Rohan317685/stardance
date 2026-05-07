@@ -24,12 +24,6 @@ class MyController < ApplicationController
     redirect_back fallback_location: root_path, notice: "Settings saved"
   end
 
-  def stardust_click
-    clicks = params[:clicks].to_i.clamp(1, 100)
-    current_user.increment!(:stardust_clicks, clicks)
-    head :ok
-  end
-
   def dismiss_thing
     thing_name = params[:thing_name]
     return head :bad_request unless thing_name.present?

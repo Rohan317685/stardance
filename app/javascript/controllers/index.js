@@ -154,9 +154,6 @@ application.register("sidebar-active", SidebarActiveController);
 import SnowController from "./snow_controller";
 application.register("snow", SnowController);
 
-import StardustClickerController from "./stardust_clicker_controller";
-application.register("stardust-clicker", StardustClickerController);
-
 import SuperMegaFunnelController from "./super_mega_funnel_controller";
 application.register("super-mega-funnel", SuperMegaFunnelController);
 
