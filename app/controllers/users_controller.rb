@@ -5,7 +5,7 @@ class UsersController < ApplicationController
     @user = User.find(params[:id])
     authorize @user
 
-    @body_class = "user-profile-page"
+    @body_class = "profile-layout-page"
     @active_tab = TAB_KEYS.include?(params[:tab]) ? params[:tab] : "feed"
 
     @projects = @user.projects

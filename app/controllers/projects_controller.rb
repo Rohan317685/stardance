@@ -5,9 +5,11 @@ class ProjectsController < ApplicationController
   def show
     authorize @project
 
+    @body_class = "profile-layout-page"
+
     load_posts = -> {
       @project.posts
-               .includes(:user, postable: [ :attachments_attachments ])
+               .includes(postable: [ :attachments_attachments ])
                .order(created_at: :desc)
                .select { |post| post.postable.present? }
     }

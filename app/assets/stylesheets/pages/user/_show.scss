@@ -5,7 +5,7 @@
 // in the center of the viewport, fixed right rail on the right. The sidebars
 // live in `position: fixed` so the main column can center on the *full*
 // viewport regardless of the sidebars' widths.
-body.user-profile-page.signed-in {
+body.profile-layout-page.signed-in {
   margin-left: 0;
   margin-right: 0;
 
@@ -436,12 +436,13 @@ turbo-frame#profile_tabs {
 }
 
 .profile__action-btn {
-  padding: 3px 16px;
+  padding: 8px 28px;
   border-radius: 999px;
   border: 1px solid var(--color-space-text);
   background: transparent;
   color: var(--color-space-text);
-  font-size: 1rem; // 16px
+  font-size: 1.25rem; // 20px
+  font-weight: 600;
   cursor: pointer;
   font-family: inherit;
   text-decoration: none;
@@ -452,12 +453,6 @@ turbo-frame#profile_tabs {
 
   &--primary {
     background: var(--color-space-surface);
-  }
-
-  &--follow {
-    padding: 8px 28px;
-    font-size: 1.25rem; // 20px
-    font-weight: 600;
   }
 
   &--following {

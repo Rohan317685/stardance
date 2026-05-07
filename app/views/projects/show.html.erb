@@ -12,51 +12,150 @@
   <% end %>
 <% end %>
 
-<div class="projects-show">
-  <div class="projects-show__container">
-    <%= render ProjectShowCardComponent.new(project: @project, current_user: current_user) %>
+<%
+  banner_url = @project.banner.attached? ? url_for(@project.banner) : image_path("profile/default-banner.png")
+  members = @project.users.to_a
+  is_member = current_user && members.include?(current_user)
+  follower_count = @project.project_follows.size
+  viewer_follow = current_user && @project.project_follows.find_by(user_id: current_user.id)
+  total_hours = (@project.duration_seconds / 3600.0).round
+  latest_ship_post = @posts.find { |p| p.postable_type == "Post::ShipEvent" }
+%>
 
-    <% if @show_ai_coding_time_ignored_card %>
-      <div id="ai-coding-time-ignored-card" class="projects-show__info-card">
-        <h2>Note: AI coding time is being ignored</h2>
-        <h3>Time spent coding entirely using AI agents like GitHub Copilot is being automatically filtered out of total project time. If you were using AI agents excessively and see discrepancies in your coding time, this is likely why. Please ask the support team in <a href="https://hackclub.slack.com/app_redirect?channel=C09MATKQM8C" rel="noopener" target="_blank">#flavortown-help</a> if you have any questions!</h3>
-        <button id="dismiss-ai-coding-time-ignored" class="projects-show__info-card-dismiss-button" aria-label="Dismiss" data-dismiss-url="<%= dismiss_thing_path %>" onclick="fetch(this.dataset.dismissUrl, {method: 'POST', headers: {'X-CSRF-Token': document.querySelector('meta[name=csrf-token]').content, 'Content-Type': 'application/x-www-form-urlencoded'}, body: 'thing_name=ai_coding_time_ignored_card'}); this.closest('.projects-show__info-card').remove();">X</button>
+<div class="profile-layout">
+  <div class="profile-layout__main">
+
+    <header class="profile__header project-show__header">
+      <div class="profile__banner" style="--banner-image: url('<%= banner_url %>');">
+        <%= link_to home_path,
+                    class: "profile__back",
+                    "aria-label": "Back",
+                    data: {
+                      controller: "back-button",
+                      "back-button-fallback-value": home_path,
+                      action: "click->back-button#go",
+                      turbo_frame: "_top"
+                    } do %>
+          <svg class="profile__back-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 6l-6 6 6 6"/>
+          </svg>
+        <% end %>
       </div>
+
+      <div class="profile__card">
+        <div class="profile__body">
+          <div class="profile__top-row">
+            <div class="profile__identity">
+              <h1 class="profile__handle"><%= @project.title %></h1>
+              <div class="project-show__byline">
+                <% if members.any? %>
+                  <ul class="project-show__avatars" aria-hidden="true">
+                    <% members.first(4).each do |member| %>
+                      <li>
+                        <% if member.slack_id.present? %>
+                          <%= image_tag member.avatar, alt: member.display_name, class: "project-show__avatar" %>
+                        <% else %>
+                          <span class="project-show__avatar project-show__avatar--placeholder">
+                            <%= member.display_name.to_s.first&.upcase %>
+                          </span>
+                        <% end %>
+                      </li>
+                    <% end %>
+                  </ul>
+                <% end %>
+                <p class="project-show__authors">
+                  By
+                  <% members.each_with_index do |m, i| %>
+                    <%= " and " if i > 0 && i == members.length - 1 %><%= link_to "@#{m.display_name}", user_path(m), class: "project-show__author", data: { turbo_frame: "_top", turbo_prefetch: "true" } %><%= "," if i < members.length - 2 && members.length > 2 %>
+                  <% end %>
+                </p>
+              </div>
+            </div>
+
+            <ul class="profile__stats" aria-label="Project stats">
+              <li class="profile__stat">
+                <span class="profile__stat-num"><%= @project.devlogs_count %></span>
+                <span class="profile__stat-label">Devlogs</span>
+              </li>
+              <li class="profile__stat">
+                <span class="profile__stat-num"><%= total_hours %></span>
+                <span class="profile__stat-label">Total hours</span>
+              </li>
+            </ul>
+          </div>
+
+          <% if @project.description.present? %>
+            <p class="profile__bio"><%= @project.description %></p>
+          <% end %>
+
+          <div class="profile__footer">
+            <p class="profile__follow-counts">
+              <span class="profile__follow-count">
+                <strong><%= follower_count %></strong> <%= "follower".pluralize(follower_count) %>
+              </span>
+            </p>
+
+            <div class="profile__actions">
+              <% if @project.fire? %>
+                <span class="project-show__badge project-show__badge--fire">⭐ Super Star Project</span>
+              <% end %>
+
+              <% if is_member %>
+                <%= link_to "Edit project info",
+                            edit_project_path(@project),
+                            class: "profile__action-btn profile__action-btn--primary",
+                            data: { turbo_frame: "_top" } %>
+              <% elsif current_user %>
+                <%= link_to (viewer_follow ? "Following" : "Follow"),
+                            (viewer_follow ? unfollow_project_path(@project) : follow_project_path(@project)),
+                            class: [ "profile__action-btn", "profile__action-btn--primary", ("profile__action-btn--following" if viewer_follow) ].compact.join(" "),
+                            data: {
+                              turbo_method: (viewer_follow ? :delete : :post),
+                              turbo_frame: "_top"
+                            } %>
+              <% end %>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <% if is_member %>
+      <nav class="project-show__actions" aria-label="Project actions">
+        <%= link_to "Post a devlog",
+                    new_project_devlog_path(@project),
+                    class: "project-show__action project-show__action--secondary",
+                    data: { turbo_frame: "_top" } %>
+        <%= link_to "Create new ship 🚀",
+                    new_project_ships_path(@project),
+                    class: "project-show__action project-show__action--primary",
+                    data: { turbo_frame: "_top" } %>
+        <button type="button"
+                class="project-show__action project-show__action--secondary"
+                disabled
+                title="Manage teammates — coming soon">Manage teammates</button>
+      </nav>
     <% end %>
 
-    <% if current_user.present? %>
-      <div class="mt-4" style="display: flex; gap: var(--space-m); align-items: center;">
-        <% if @project.users.include?(current_user) %>
-          <%= render ButtonComponent.new(
-                text: "Add Devlog",
-                color: :brown,
-                href: new_project_devlog_path(@project)
-              ) %>
-        <% end %>
-
-        <% if policy(:helper).access? %>
-          <% helper_user = owner || @project.users.first %>
-          <% if helper_user.present? %>
-            <%= link_to "View user on helper dash", helper_user_path(helper_user), class: "btn btn--brown" %>
-          <% end %>
-          <%= link_to "View project on helper dash", helper_project_path(@project), class: "btn btn--brown" %>
-        <% end %>
-
-      </div>
+    <% if @show_ai_coding_time_ignored_card %>
+      <aside id="ai-coding-time-ignored-card" class="project-show__notice">
+        <h2>Note: AI coding time is being ignored</h2>
+        <p>Time spent coding entirely using AI agents like GitHub Copilot is being automatically filtered out of total project time. If you were using AI agents excessively and see discrepancies, this is likely why. Ask the support team in <a href="https://hackclub.slack.com/app_redirect?channel=C09MATKQM8C" rel="noopener" target="_blank">#flavortown-help</a> if you have questions.</p>
+        <button class="project-show__notice-dismiss"
+                aria-label="Dismiss"
+                data-dismiss-url="<%= dismiss_thing_path %>"
+                onclick="fetch(this.dataset.dismissUrl, {method: 'POST', headers: {'X-CSRF-Token': document.querySelector('meta[name=csrf-token]').content, 'Content-Type': 'application/x-www-form-urlencoded'}, body: 'thing_name=ai_coding_time_ignored_card'}); this.closest('#ai-coding-time-ignored-card').remove();">×</button>
+      </aside>
     <% end %>
 
     <% if @votes_for_payout.present? %>
-      <section class="projects-show__payout-votes" aria-label="Votes needed to unlock payout">
-        <h3 class="projects-show__payout-votes-title">Votes needed to unlock payout <span id="votes-progress-info">ⓘ</span></h3>
-
-        <div class="projects-show__payout-votes-row">
-          <progress
-            class="projects-show__payout-votes-progress"
-            value="<%= @votes_for_payout[:current] %>"
-            max="<%= @votes_for_payout[:required] %>">
-          </progress>
-
-          <div class="projects-show__payout-votes-text">
+      <section class="project-show__payout-votes" aria-label="Votes needed to unlock payout">
+        <h3 class="project-show__payout-votes-title">Votes needed to unlock payout <span id="votes-progress-info">ⓘ</span></h3>
+        <div class="project-show__payout-votes-row">
+          <progress class="project-show__payout-votes-progress"
+                    value="<%= @votes_for_payout[:current] %>"
+                    max="<%= @votes_for_payout[:required] %>"></progress>
+          <div class="project-show__payout-votes-text">
             <strong><%= @votes_for_payout[:current] %></strong> / <%= @votes_for_payout[:required] %>
             <% if @votes_for_payout[:remaining] > 0 %>
               (<%= @votes_for_payout[:remaining] %> left)
@@ -68,20 +167,22 @@
       </section>
     <% end %>
 
-    <% if @posts.present? %>
-      <div class="projects-show__timeline">
-        <div class="mt-4" style="display: grid; gap: var(--space-xl);">
-          <% @posts.each do |post| %>
-            <%= render PostComponent.new(
-                  post: post,
-                  current_user: current_user
-                ) %>
+    <% if @posts.any? %>
+      <section class="project-show__feed" aria-label="Project feed">
+        <% @posts.each do |post| %>
+          <% if post.postable_type == "Post::ShipEvent" %>
+            <%= render "projects/ship_card",
+                       post: post,
+                       project: @project,
+                       latest: post == latest_ship_post %>
+          <% else %>
+            <%= render PostComponent.new(post: post, current_user: current_user, theme: :profile_dark) %>
           <% end %>
-        </div>
-      </div>
+        <% end %>
+      </section>
     <% end %>
 
-    <% if current_user.present? && (!@project.users.include?(current_user) || Rails.env.development?) %>
+    <% if current_user.present? && (!is_member || Rails.env.development?) %>
       <%= render layout: "shared/modal", locals: { id: "project-report-modal", title: "Report project?" } do %>
         <h2>We want good, high quality projects in Stardance. If you believe this project violates our community guidelines, please let us know why:</h2>
 
@@ -91,17 +192,14 @@
               <%= f.radio_button :reason, "low_effort", id: "project_report_reason_low_effort", required: true %>
               <%= f.label :reason, "Low-effort project", for: "project_report_reason_low_effort" %>
             </div>
-
             <div class="form-checkbox">
               <%= f.radio_button :reason, "undeclared_ai", id: "project_report_reason_undeclared_ai" %>
               <%= f.label :reason, "Uses AI but it's undeclared", for: "project_report_reason_undeclared_ai" %>
             </div>
-
             <div class="form-checkbox">
               <%= f.radio_button :reason, "demo_broken", id: "project_report_reason_demo_broken" %>
               <%= f.label :reason, "Demo does not work", for: "project_report_reason_demo_broken" %>
             </div>
-
             <div class="form-checkbox">
               <%= f.radio_button :reason, "other", id: "project_report_reason_other" %>
               <%= f.label :reason, "Other", for: "project_report_reason_other" %>
@@ -125,10 +223,15 @@
         <% end %>
       <% end %>
     <% end %>
+
   </div>
+
+  <%= render "shared/discover_rail" %>
 </div>
 
-<%= render TooltipComponent.new(target_id: "votes-progress-info", position: :top) do %>
-  <strong>Votes needed to unlock payout</strong>
-  This shows the number of times <i>other</i> people need to vote for your project!
+<% if @votes_for_payout.present? %>
+  <%= render TooltipComponent.new(target_id: "votes-progress-info", position: :top) do %>
+    <strong>Votes needed to unlock payout</strong>
+    This shows the number of times <i>other</i> people need to vote for your project!
+  <% end %>
 <% end %>
