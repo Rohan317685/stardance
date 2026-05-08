@@ -12,7 +12,7 @@ class ProjectsController < ApplicationController
   def prepare_project_show_context
     @members = @project.users.to_a
     @is_member = current_user && @members.include?(current_user)
-    @can_edit_project = policy(@project).update?
+    @can_edit_project = @is_member && policy(@project).update?
     @follower_count = @project.project_follows.size
     @viewer_follow = current_user && @project.project_follows.find_by(user_id: current_user.id)
     @total_hours = (@project.duration_seconds / 3600.0).round
