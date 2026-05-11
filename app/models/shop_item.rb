@@ -283,7 +283,7 @@ class ShopItem < ApplicationRecord
     return true unless requires_ship?
     return false unless user.present?
 
-    user.shipped_projects_count_in_range(required_ships_start_date, required_ships_end_date) >= required_ships_count
+    user.projects.with_ship_events_between(required_ships_start_date, required_ships_end_date).count >= required_ships_count
   end
 
   def blocked_in_country?(country_code)

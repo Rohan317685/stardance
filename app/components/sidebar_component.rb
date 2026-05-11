@@ -26,7 +26,7 @@ class SidebarComponent < ViewComponent::Base
       { slug: "home",          label: "home",          path: helpers.home_path, icon: "home" },
       { slug: "notifications", label: "notifications", path: "#", icon: "bell" },
       { slug: "vote",          label: "vote",          path: helpers.new_vote_path, icon: "star_outline",
-        locked: !user.has_shipped?,
+        locked: !user.shipped_projects.exists?,
         locked_message: "The Vote tab unlocks once you ship your first project!" },
       { slug: "events",        label: "events",        path: "#", icon: "code_outline" },
       { slug: "shop",          label: "shop",          path: "/shop", icon: "cart_outline" },

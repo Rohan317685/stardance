@@ -57,6 +57,15 @@ class Project < ApplicationRecord
     user ? where.not(id: user.projects) : all
   }
   scope :fire, -> { where.not(marked_fire_at: nil) }
+  scope :with_ship_events, -> { joins(:ship_events).distinct }
+  scope :with_ship_events_between, ->(start_date, end_date) {
+    joins(:posts)
+      .where(posts: {
+        postable_type: "Post::ShipEvent",
+        created_at: start_date.beginning_of_day..end_date.end_of_day
+      })
+      .distinct
+  }
   scope :with_banner_priority, -> {
     left_joins(:banner_attachment)
       .includes(banner_attachment: :blob)
