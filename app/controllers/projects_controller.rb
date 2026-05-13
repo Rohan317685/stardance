@@ -146,7 +146,7 @@ class ProjectsController < ApplicationController
         @project.missions << mission if mission
       end
 
-      redirect_to @project
+      redirect_to project_path(@project)
     else
       flash[:alert] = "Failed to create project: #{@project.errors.full_messages.join(', ')}"
       @missions = Mission.available
@@ -173,7 +173,7 @@ class ProjectsController < ApplicationController
     # 2nd check w/ @project.errors.empty? is not redudant. this is ensures that hackatime is linked!
     if success && @project.errors.empty?
       flash[:notice] = "Project updated successfully"
-      redirect_to url_from(params[:return_to]) || @project
+      redirect_to url_from(params[:return_to]) || project_path(@project)
     else
       flash.now[:alert] = "Failed to update project: #{@project.errors.full_messages.join(', ')}"
       render_update_error
@@ -206,7 +206,7 @@ class ProjectsController < ApplicationController
       redirect_to projects_user_path(current_user)
     rescue ActiveRecord::RecordInvalid => e
       flash[:alert] = e.record.errors.full_messages.to_sentence
-      redirect_to @project
+      redirect_to project_path(@project)
     end
   end
 
@@ -315,9 +315,9 @@ class ProjectsController < ApplicationController
           )
         end
       end
-      redirect_to @project, notice: "You are now following this project."
+      redirect_to project_path(@project), notice: "You are now following this project."
     else
-      redirect_to @project, alert: follow.errors.full_messages.to_sentence
+      redirect_to project_path(@project), alert: follow.errors.full_messages.to_sentence
     end
   end
 
@@ -329,15 +329,15 @@ class ProjectsController < ApplicationController
 
     follow = current_user.project_follows.find_by(project: @project)
     if follow&.destroy
-      redirect_to @project, notice: "You have unfollowed this project."
+      redirect_to project_path(@project), notice: "You have unfollowed this project."
     else
-      redirect_to @project, alert: "Could not unfollow."
+      redirect_to project_path(@project), alert: "Could not unfollow."
     end
   end
 
   def readme
     unless turbo_frame_request?
-      redirect_to @project
+      redirect_to project_path(@project)
       return
     end
 

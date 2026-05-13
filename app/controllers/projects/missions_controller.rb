@@ -9,23 +9,23 @@ class Projects::MissionsController < ApplicationController
     @project.mission_attachments.create!(mission: mission, attached_at: Time.current)
     track_funnel("mission_attached_post_creation", mission: mission)
 
-    redirect_to @project, notice: "Attached to the #{mission.name} mission."
+    redirect_to project_path(@project), notice: "Attached to the #{mission.name} mission."
   rescue ActiveRecord::RecordInvalid => e
-    redirect_to @project, alert: e.record.errors.full_messages.to_sentence
+    redirect_to project_path(@project), alert: e.record.errors.full_messages.to_sentence
   rescue ActiveRecord::RecordNotFound
-    redirect_to @project, alert: "Mission not found."
+    redirect_to project_path(@project), alert: "Mission not found."
   end
 
   def destroy
     authorize @project, :update?
     attachment = @project.mission_attachments.where(detached_at: nil).order(attached_at: :desc).first
-    return redirect_to(@project, alert: "No mission attached.") unless attachment
+    return redirect_to(project_path(@project), alert: "No mission attached.") unless attachment
 
     mission = attachment.mission
     attachment.detach!
     track_funnel("mission_detached", mission: mission)
 
-    redirect_to @project, notice: "Detached from the #{mission.name} mission."
+    redirect_to project_path(@project), notice: "Detached from the #{mission.name} mission."
   end
 
   private

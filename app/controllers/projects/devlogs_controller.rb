@@ -16,7 +16,7 @@ class Projects::DevlogsController < ApplicationController
 
     current_user.with_advisory_lock("devlog_create", timeout_seconds: 10) do
       load_preview_time
-      return redirect_to @project, alert: "Could not calculate your coding time. Please try again." unless @preview_time.present?
+      return redirect_to project_path(@project), alert: "Could not calculate your coding time. Please try again." unless @preview_time.present?
 
       @devlog = Post::Devlog.new(devlog_params)
       @devlog.duration_seconds = @preview_seconds
@@ -44,7 +44,7 @@ class Projects::DevlogsController < ApplicationController
           tutorial_message OnboardingCopy::FIRST_DEVLOG_POSTED
         end
 
-        return redirect_to @project
+        return redirect_to project_path(@project)
       else
         flash.now[:alert] = @devlog.errors.full_messages.to_sentence
         render :new, status: :unprocessable_entity
@@ -91,7 +91,7 @@ class Projects::DevlogsController < ApplicationController
         @devlog.create_version!(user: current_user, previous_body: previous_body)
       end
 
-      redirect_to @project, notice: "Devlog updated successfully"
+      redirect_to project_path(@project), notice: "Devlog updated successfully"
     else
       flash.now[:alert] = @devlog.errors.full_messages.to_sentence
       render :edit, status: :unprocessable_entity
@@ -105,7 +105,7 @@ class Projects::DevlogsController < ApplicationController
 
     if project_shipped && !force
       flash[:alert] = "Cannot delete a devlog from a shipped project"
-      redirect_to @project and return
+      redirect_to project_path(@project) and return
     end
 
     if force && project_shipped
@@ -125,7 +125,7 @@ class Projects::DevlogsController < ApplicationController
     end
 
     @devlog.soft_delete!
-    redirect_to @project, notice: "Devlog deleted successfully"
+    redirect_to project_path(@project), notice: "Devlog deleted successfully"
   end
 
   def versions
@@ -149,7 +149,7 @@ class Projects::DevlogsController < ApplicationController
 
   def require_hackatime_project
     unless @project.hackatime_keys.present?
-      redirect_to @project, alert: "You must link at least one Hackatime project before posting a devlog" and return
+      redirect_to project_path(@project), alert: "You must link at least one Hackatime project before posting a devlog" and return
     end
   end
 
@@ -168,7 +168,7 @@ class Projects::DevlogsController < ApplicationController
         @show_loading = true
         render :loading and return
       else
-        redirect_to @project, alert: "Could not fetch your coding time from Hackatime after multiple attempts. Please ensure Hackatime is tracking your project." and return
+        redirect_to project_path(@project), alert: "Could not fetch your coding time from Hackatime after multiple attempts. Please ensure Hackatime is tracking your project." and return
       end
     end
   end

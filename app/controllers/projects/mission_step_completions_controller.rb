@@ -8,13 +8,13 @@ class Projects::MissionStepCompletionsController < ApplicationController
     completion = @project.mission_step_completions.find_or_initialize_by(mission_step_id: @step.id)
     completion.completed_at ||= Time.current
     completion.save!
-    redirect_to @project
+    redirect_to project_path(@project)
   end
 
   def destroy
     authorize @project, :update?
     @project.mission_step_completions.where(mission_step_id: @step.id).destroy_all
-    redirect_to @project
+    redirect_to project_path(@project)
   end
 
   private
