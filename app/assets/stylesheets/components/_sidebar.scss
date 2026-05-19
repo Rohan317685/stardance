@@ -270,6 +270,12 @@ button.sidebar__nav-link {
   font-size: 1.2rem;
 }
 
+.sidebar__nav-avatar--guest {
+  background: var(--color-space-accent-soft);
+  object-fit: contain;
+  padding: 3px;
+}
+
 .sidebar__nav-label {
   white-space: nowrap;
   flex-shrink: 0;
@@ -286,7 +292,7 @@ button.sidebar__nav-link {
   gap: var(--space-s);
   padding: var(--space-xs) var(--space-s);
   border-radius: calc(var(--border-radius) / 1.5);
-  background: var(--color-space-card);
+  background: var(--color-space-accent-soft);
   color: var(--color-space-text);
   white-space: nowrap;
   overflow: hidden;

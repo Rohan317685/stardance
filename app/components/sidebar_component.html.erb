@@ -17,13 +17,8 @@
             <span class="sidebar__nav-icon-wrapper" aria-hidden="true">
               <% case item[:icon] %>
               <% when :avatar %>
-                <% if user.slack_id.present? %>
-                  <%= image_tag user.avatar, alt: "", class: "sidebar__nav-avatar" %>
-                <% else %>
-                  <span class="sidebar__nav-avatar sidebar__nav-avatar--placeholder">
-                    <%= user.display_name.first.upcase %>
-                  </span>
-                <% end %>
+                <% avatar_classes = [ "sidebar__nav-avatar", ("sidebar__nav-avatar--guest" if user.slack_id.blank?) ].compact.join(" ") %>
+                <%= image_tag user.avatar, alt: "", class: avatar_classes %>
               <% when Hash %>
                 <%= image_tag "icons/#{item[:icon][:idle]}.png", alt: "", class: "sidebar__nav-icon sidebar__nav-icon--idle" %>
                 <%= image_tag "icons/#{item[:icon][:active]}.png", alt: "", class: "sidebar__nav-icon sidebar__nav-icon--active" %>
