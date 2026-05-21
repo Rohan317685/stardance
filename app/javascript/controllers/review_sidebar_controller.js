@@ -16,7 +16,7 @@ export default class extends Controller {
   static targets = ["sidebar", "trigger", "toggle"];
 
   connect() {
-    console.log("Review sidebar controller connected!");
+    //console.log("Review sidebar controller connected!");
     if (typeof IntersectionObserver === "undefined") return;
 
     // Track popup open state
@@ -29,7 +29,7 @@ export default class extends Controller {
         entries.forEach((entry) => {
           if (entry.isIntersecting && !this.popupModeActivated) {
             // First devlog is visible - transform to popup mode
-            console.log("First devlog visible - activating popup mode");
+            //console.log("First devlog visible - activating popup mode");
             this.popupModeActivated = true;
             this.sidebarTarget.classList.add("is-popup-mode");
             this.toggleTarget.classList.add("is-visible");
@@ -50,7 +50,7 @@ export default class extends Controller {
     this.scrollHandler = () => {
       // If scrolled near the top (within 200px), exit popup mode
       if (window.scrollY < 200 && this.popupModeActivated) {
-        console.log("Scrolled to top - returning to normal mode");
+        //console.log("Scrolled to top - returning to normal mode");
         this.popupModeActivated = false;
         this.sidebarTarget.classList.remove("is-popup-mode");
         this.sidebarTarget.classList.remove("is-open");
