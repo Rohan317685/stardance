@@ -1,6 +1,6 @@
 <% content_for :title, "YSWS Review ##{@review.id}" %>
 
-<main class="admin-ysws-reviews" role="main" data-controller="review-sidebar fraud-report" data-fraud-report-review-id-value="<%= @review.id %>">
+<main class="admin-ysws-reviews" role="main" data-controller="review-sidebar fraud-report media-viewer" data-fraud-report-review-id-value="<%= @review.id %>">
   <!-- Header Section -->
   <div class="review-detail-header">
     <%= link_to "← back", "/admin/review", class: "btn-back", "aria-label": "Back to review queue" %>
@@ -304,14 +304,14 @@
                   <div class="media-grid">
                     <% devlog_review.post_devlog.attachments.each do |attachment| %>
                       <% if attachment.video? %>
-                        <a href="<%= url_for(attachment) %>" target="_blank" class="media-item video-item">
+                        <a href="<%= url_for(attachment) %>" class="media-item video-item" data-action="click->media-viewer#open">
                           <video class="media-thumbnail" muted>
                             <source src="<%= url_for(attachment) %>" type="<%= attachment.content_type %>">
                           </video>
                           <div class="media-type-badge">Video</div>
                         </a>
                       <% else %>
-                        <a href="<%= url_for(attachment) %>" target="_blank" class="media-item image-item">
+                        <a href="<%= url_for(attachment) %>" class="media-item image-item" data-action="click->media-viewer#open">
                           <%= image_tag attachment.variant(:thumb), class: "media-thumbnail", alt: "Devlog attachment" %>
                         </a>
                       <% end %>
@@ -469,6 +469,17 @@
           Submit Report
         </button>
       </div>
+    </div>
+  </div>
+
+  <!-- Media Viewer Modal -->
+  <div class="media-viewer-modal" data-media-viewer-target="modal">
+    <button class="media-viewer-modal__close" data-action="click->media-viewer#close" aria-label="Close media viewer">
+      ×
+    </button>
+    <div class="media-viewer-modal__content" data-action="click->media-viewer#stopPropagation" data-media-viewer-target="content">
+      <img class="media-viewer-modal__image hidden" data-media-viewer-target="image" alt="Devlog media">
+      <video class="media-viewer-modal__video hidden" data-media-viewer-target="video" controls autoplay></video>
     </div>
   </div>
 </main>

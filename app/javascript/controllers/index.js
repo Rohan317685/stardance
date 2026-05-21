@@ -94,6 +94,9 @@ application.register("locked-tab", LockedTabController);
 import MarkdownPreviewController from "./markdown_preview_controller";
 application.register("markdown-preview", MarkdownPreviewController);
 
+import MediaViewerController from "./media_viewer_controller";
+application.register("media-viewer", MediaViewerController);
+
 import ModalController from "./modal_controller";
 application.register("modal", ModalController);
 
