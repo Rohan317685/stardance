@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_27_000000) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_27_170653) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -188,25 +188,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_27_000000) do
     t.datetime "updated_at", null: false
     t.index ["item_type", "item_id"], name: "index_disco_recommendations_on_item"
     t.index ["subject_type", "subject_id"], name: "index_disco_recommendations_on_subject"
-  end
-
-  create_table "flavortime_sessions", force: :cascade do |t|
-    t.string "app_version"
-    t.datetime "created_at", null: false
-    t.integer "discord_shared_seconds", default: 0, null: false
-    t.integer "discord_status_seconds", default: 0, null: false
-    t.datetime "ended_at"
-    t.string "ended_reason"
-    t.datetime "expires_at", null: false
-    t.datetime "last_heartbeat_at", null: false
-    t.string "platform"
-    t.string "session_id"
-    t.datetime "updated_at", null: false
-    t.bigint "user_id", null: false
-    t.index ["expires_at"], name: "index_flavortime_sessions_on_expires_at"
-    t.index ["session_id"], name: "index_flavortime_sessions_on_session_id", unique: true
-    t.index ["user_id", "created_at"], name: "index_flavortime_sessions_on_user_id_and_created_at"
-    t.index ["user_id"], name: "index_flavortime_sessions_on_user_id"
   end
 
   create_table "flipper_features", force: :cascade do |t|
@@ -647,10 +628,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_27_000000) do
     t.index ["user_id"], name: "index_shop_card_grants_on_user_id"
   end
 
+  create_table "shop_item_attachments", force: :cascade do |t|
+    t.bigint "accessory_item_id", null: false
+    t.datetime "created_at", null: false
+    t.bigint "parent_item_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["accessory_item_id"], name: "index_shop_item_attachments_on_accessory_item_id"
+    t.index ["parent_item_id", "accessory_item_id"], name: "idx_on_parent_item_id_accessory_item_id_9641b2d0dd", unique: true
+    t.index ["parent_item_id"], name: "index_shop_item_attachments_on_parent_item_id"
+  end
+
   create_table "shop_items", force: :cascade do |t|
     t.string "accessory_tag"
     t.jsonb "agh_contents"
-    t.bigint "attached_shop_item_ids", default: [], array: true
     t.string "blocked_countries", default: [], array: true
     t.boolean "buyable_by_self", default: true
     t.datetime "created_at", precision: nil, default: -> { "CURRENT_TIMESTAMP" }, null: false
@@ -686,7 +676,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_27_000000) do
     t.integer "max_qty"
     t.boolean "mission_prize_only", default: false, null: false
     t.string "name"
-    t.integer "old_prices", default: [], array: true
     t.boolean "one_per_person_ever"
     t.integer "past_purchases", default: 0
     t.integer "payout_percentage", default: 0
@@ -737,7 +726,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_27_000000) do
 
   create_table "shop_orders", force: :cascade do |t|
     t.string "aasm_state"
-    t.bigint "accessory_ids", default: [], array: true
     t.bigint "assigned_to_user_id"
     t.datetime "awaiting_periodical_fulfillment_at"
     t.datetime "created_at", null: false
@@ -965,6 +953,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_27_000000) do
     t.index ["object_changes"], name: "index_versions_on_object_changes", using: :gin
   end
 
+  create_table "vote_assignments", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "ship_event_id", null: false
+    t.string "status", default: "assigned", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "user_id", null: false
+    t.bigint "vote_id"
+    t.index ["ship_event_id"], name: "index_vote_assignments_on_ship_event_id"
+    t.index ["user_id", "ship_event_id"], name: "index_vote_assignments_on_user_id_and_ship_event_id", unique: true
+    t.index ["user_id", "status"], name: "index_vote_assignments_on_user_id_and_status"
+    t.index ["user_id"], name: "index_vote_assignments_on_user_id"
+    t.index ["vote_id"], name: "index_vote_assignments_on_vote_id"
+  end
+
   create_table "vote_reason_embeddings", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.vector "embedding", limit: 1536, null: false
@@ -976,29 +978,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_27_000000) do
 
   create_table "votes", force: :cascade do |t|
     t.datetime "created_at", null: false
-    t.boolean "demo_url_clicked", default: false
     t.integer "originality_score"
     t.bigint "project_id", null: false
     t.text "reason"
-    t.string "reason_quality_label"
-    t.float "reason_quality_score"
-    t.boolean "repo_url_clicked", default: false
     t.bigint "ship_event_id", null: false
     t.integer "storytelling_score"
-    t.boolean "suspicious", default: false, null: false
     t.integer "technical_score"
-    t.integer "time_taken_to_vote"
     t.datetime "updated_at", null: false
     t.integer "usability_score"
     t.bigint "user_id", null: false
-    t.string "verdict"
     t.index ["project_id"], name: "index_votes_on_project_id"
-    t.index ["reason_quality_label"], name: "index_votes_on_reason_quality_label"
     t.index ["ship_event_id"], name: "index_votes_on_ship_event_id"
-    t.index ["suspicious", "created_at"], name: "index_votes_on_suspicious_and_created_at"
     t.index ["user_id", "ship_event_id"], name: "index_votes_on_user_id_and_ship_event_id", unique: true
     t.index ["user_id"], name: "index_votes_on_user_id"
-    t.index ["verdict"], name: "index_votes_on_verdict"
   end
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
@@ -1006,7 +998,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_27_000000) do
   add_foreign_key "comments", "users"
   add_foreign_key "devlog_versions", "post_devlogs", column: "devlog_id"
   add_foreign_key "devlog_versions", "users"
-  add_foreign_key "flavortime_sessions", "users"
   add_foreign_key "follows", "users", column: "followed_id"
   add_foreign_key "follows", "users", column: "follower_id"
   add_foreign_key "fulfillment_payout_lines", "fulfillment_payout_runs"
@@ -1048,6 +1039,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_27_000000) do
   add_foreign_key "rsvp_replies", "rsvps"
   add_foreign_key "shop_card_grants", "shop_items"
   add_foreign_key "shop_card_grants", "users"
+  add_foreign_key "shop_item_attachments", "shop_items", column: "accessory_item_id", on_delete: :cascade
+  add_foreign_key "shop_item_attachments", "shop_items", column: "parent_item_id", on_delete: :cascade
   add_foreign_key "shop_items", "users"
   add_foreign_key "shop_items", "users", column: "created_by_user_id", on_delete: :nullify
   add_foreign_key "shop_items", "users", column: "default_assigned_user_id", on_delete: :nullify
@@ -1071,6 +1064,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_27_000000) do
   add_foreign_key "user_identities", "users"
   add_foreign_key "user_preferences", "users"
   add_foreign_key "user_vote_verdicts", "users"
+  add_foreign_key "vote_assignments", "post_ship_events", column: "ship_event_id"
+  add_foreign_key "vote_assignments", "users"
+  add_foreign_key "vote_assignments", "votes"
   add_foreign_key "votes", "post_ship_events", column: "ship_event_id"
   add_foreign_key "votes", "projects"
   add_foreign_key "votes", "users"
