@@ -2,15 +2,14 @@
 
 <main class="vote-page" aria-labelledby="vote-page-title">
   <% if @assignment.present? %>
-    <%= render "votes/toolbar", assignment: @assignment %>
-
     <div class="vote-page__layout">
       <section class="vote-page__main" aria-label="Project context">
+        <%= render "votes/toolbar", assignment: @assignment %>
         <%= render "votes/project_card", project: @project %>
         <%= render "votes/timeline", posts: @timeline_posts, project: @project %>
       </section>
 
-      <aside class="vote-page__aside" aria-label="Scorecard">
+      <aside class="vote-page__aside" aria-labelledby="vote-scorecard-title">
         <%= render "votes/scorecard", assignment: @assignment, vote: @vote %>
       </aside>
     </div>

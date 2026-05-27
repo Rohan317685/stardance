@@ -12,12 +12,14 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-m);
-  margin-bottom: var(--space-m);
+  padding: 20px 24px;
+  border-radius: var(--profile-radius);
+  background: var(--color-set-3-bg);
 }
 
 .vote-page__title {
   margin: 0;
-  font-family: "Exo 2", sans-serif;
+  font-family: var(--font-family-text);
   font-size: var(--font-size-xxxl);
   font-weight: 700;
   line-height: var(--line-height-headers);
@@ -26,21 +28,17 @@
 .vote-page__skip {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
   gap: var(--space-xxs);
-  min-height: 40px;
-  padding: 0 var(--space-m);
-  border: 2px solid var(--color-space-border);
-  border-radius: 999px;
+  padding: 0;
+  border: none;
   background: transparent;
   color: var(--color-space-text);
   font: inherit;
-  font-weight: 700;
+  font-size: var(--font-size-xl);
   cursor: pointer;
 
   &:hover,
   &:focus-visible {
-    border-color: var(--color-brand-highlight);
     color: var(--color-brand-highlight);
     outline: none;
   }
@@ -53,21 +51,18 @@
   align-items: start;
 }
 
-.vote-page__main,
-.vote-page__timeline {
+.vote-page__main {
   display: flex;
   flex-direction: column;
   gap: var(--vote-page-gap);
   min-width: 0;
 }
 
-.vote-page__project {
-  .project-shelf-card {
-    min-height: 160px;
-    border: 2px solid var(--color-space-border);
-    border-radius: var(--profile-radius, var(--border-radius));
-    background: var(--color-set-3-bg);
-  }
+.vote-page__timeline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--vote-page-gap);
+  min-width: 0;
 }
 
 .vote-page__aside {
@@ -80,7 +75,7 @@
   margin: var(--space-xl) auto;
   padding: var(--space-xl);
   border: 2px solid var(--color-space-border);
-  border-radius: var(--profile-radius, var(--border-radius));
+  border-radius: var(--profile-radius);
   background: var(--color-set-2-bg);
   text-align: center;
 }
@@ -91,38 +86,117 @@
   font-size: var(--font-size-l);
 }
 
-.vote-scorecard {
-  padding: var(--space-m);
-  border: 2px solid var(--color-space-border);
-  border-radius: var(--profile-radius, var(--border-radius));
-  background: var(--color-set-2-bg);
+// `.project-show` sets `width: min(100%, 922px); align-self: center;` —
+// fine here since the vote main column tops out around that. In the vote
+// context we don't want the back/edit/follow chrome from the projects page,
+// but the structural styles all carry over verbatim.
+.project-show--vote {
+  // Override the project-show panel's min-height so the hero hugs its
+  // contents — voters skip the edit grid + actions, so the panel ends up
+  // much shorter than on the project show page.
+  .project-show__panel {
+    min-height: 0;
+  }
 }
 
-.vote-scorecard__header {
-  padding-bottom: var(--space-s);
-  margin-bottom: var(--space-m);
-  border-bottom: 1px solid var(--color-space-border);
+.project-show__ai-declaration {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: var(--space-xxs);
+  align-items: start;
+  opacity: 0.75;
 }
 
-.vote-scorecard__title {
+.project-show__ai-declaration-icon {
+  width: 24px;
+  height: 24px;
+  color: var(--color-space-text);
+}
+
+.project-show__ai-declaration-text {
   margin: 0;
-  font-family: "Exo 2", sans-serif;
-  font-size: var(--font-size-xxl);
-  font-weight: 700;
-  line-height: var(--line-height-headers);
+  font-size: var(--font-size-m);
+  line-height: 1.3;
 }
 
-.vote-scorecard__form,
-.vote-scorecard__scores {
+// ----- Scorecard -----
+
+.vote-scorecard {
   display: flex;
   flex-direction: column;
   gap: var(--space-m);
 }
 
+.vote-scorecard__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-s);
+  padding: var(--space-xs) 0;
+}
+
+// Decorative divider line on either side of the title with a sparkle at the
+// inner end. Mirrors the Figma "✨ Scorecard ✨" hero treatment.
+.vote-scorecard__sparkle {
+  position: relative;
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent 0%,
+    hsla(0, 0%, 100%, 0.4) 100%
+  );
+
+  &:last-child {
+    background: linear-gradient(
+      to left,
+      transparent 0%,
+      hsla(0, 0%, 100%, 0.4) 100%
+    );
+  }
+}
+
+.vote-scorecard__sparkle-icon {
+  position: absolute;
+  top: 50%;
+  width: 20px;
+  height: 20px;
+  color: var(--color-space-text);
+  transform: translateY(-50%);
+
+  .vote-scorecard__sparkle:first-child & {
+    right: 0;
+  }
+
+  .vote-scorecard__sparkle:last-child & {
+    left: 0;
+  }
+}
+
+.vote-scorecard__title {
+  margin: 0;
+  font-family: var(--font-family-text);
+  font-size: var(--font-size-xxxl);
+  font-weight: 700;
+  line-height: var(--line-height-headers);
+  white-space: nowrap;
+}
+
+.vote-scorecard__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-m);
+}
+
+.vote-scorecard__scores {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-s);
+}
+
 .vote-scorecard__errors {
   padding: var(--space-s);
   border: 2px solid var(--color-brand-salmon);
-  border-radius: var(--border-radius);
+  border-radius: var(--profile-radius);
   background: var(--color-brand-salmon-soft);
 }
 
@@ -139,11 +213,19 @@
 .vote-scorecard__feedback {
   display: flex;
   flex-direction: column;
-  gap: var(--space-xs);
+  gap: var(--space-xxs);
 }
 
 .vote-scorecard__label {
-  font-weight: 700;
+  font-size: var(--font-size-l);
+  font-weight: 400;
+}
+
+.vote-scorecard__feedback-help {
+  margin: 0 0 var(--space-xxs);
+  color: var(--color-space-text-muted);
+  font-size: var(--font-size-m);
+  line-height: 1.3;
 }
 
 .vote-scorecard__textarea {
@@ -151,7 +233,7 @@
   min-height: 156px;
   padding: var(--space-s);
   border: 2px solid var(--color-border-input);
-  border-radius: var(--border-radius);
+  border-radius: var(--profile-radius);
   background: var(--color-set-1-bg);
   color: var(--color-space-text);
   font: inherit;
@@ -174,51 +256,65 @@
   min-height: 48px;
   width: 100%;
   padding: 0 var(--space-m);
-  border: 2px solid var(--color-brand-highlight);
+  border: 2px solid var(--color-brand-cream);
   border-radius: 999px;
-  background: var(--color-brand-highlight);
+  background: var(--color-brand-cream);
   color: var(--color-set-1-bg);
   font: inherit;
+  font-size: var(--font-size-l);
   font-weight: 700;
   cursor: pointer;
+  transition:
+    background 150ms ease,
+    border-color 150ms ease;
 
   &:hover,
   &:focus-visible {
-    background: var(--color-brand-highlight-secondary);
-    border-color: var(--color-brand-highlight-secondary);
+    background: var(--color-brand-yellow);
+    border-color: var(--color-brand-yellow);
     outline: none;
   }
 }
+
+// ----- Score input row -----
 
 .vote-score {
   min-width: 0;
   padding: 0;
   margin: 0;
   border: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xxs);
 }
 
 .vote-score__legend {
   display: flex;
   flex-direction: column;
-  gap: var(--space-xxs);
+  gap: 2px;
   width: 100%;
-  margin-bottom: var(--space-xs);
+  margin: 0;
+  padding: 0;
 }
 
 .vote-score__name {
-  font-weight: 700;
+  font-size: var(--font-size-l);
 }
 
 .vote-score__description {
   color: var(--color-space-text-muted);
-  font-size: var(--font-size-s);
+  font-size: var(--font-size-m);
   line-height: 1.3;
 }
 
 .vote-score__options {
   display: grid;
   grid-template-columns: repeat(9, minmax(0, 1fr));
-  gap: 4px;
+  gap: var(--space-xxs);
+  padding: 4px 8px;
+  border: 2px solid var(--color-border-input);
+  border-radius: var(--profile-radius);
+  background: var(--color-set-1-bg);
 }
 
 .vote-score__input {
@@ -238,9 +334,9 @@
   display: grid;
   place-items: center;
   min-width: 0;
-  border: 1px solid var(--color-space-border);
+  border: 1px solid hsla(0, 0%, 100%, 0.25);
   border-radius: 50%;
-  background: var(--color-set-1-bg);
+  background: transparent;
   color: var(--color-space-text-muted);
   cursor: pointer;
   transition:
@@ -269,15 +365,15 @@
 }
 
 .vote-score__input:checked + .vote-score__star {
-  border-color: var(--color-brand-highlight);
-  background: var(--color-brand-highlight);
+  border-color: var(--color-brand-cream);
+  background: var(--color-brand-cream);
   color: var(--color-set-1-bg);
 }
 
 .vote-score__input:focus-visible + .vote-score__star,
 .vote-score__star:hover {
-  border-color: var(--color-brand-highlight);
-  color: var(--color-brand-highlight);
+  border-color: var(--color-brand-cream);
+  color: var(--color-brand-cream);
   transform: translateY(-1px);
 }
 
@@ -304,6 +400,7 @@
   .vote-page__toolbar {
     align-items: flex-start;
     flex-direction: column;
+    padding: var(--space-m);
   }
 
   .vote-page__skip {
