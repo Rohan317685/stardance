@@ -4,11 +4,31 @@ class Admin::Certification::ShipsController < Admin::Certification::ApplicationC
 
   def index
     authorize ::Certification::Ship
-    @ships = policy_scope(::Certification::Ship)
-               .pending
-               .includes(:project, :reviewer)
-               .order(claim_expires_at: :asc, created_at: :asc)
-               .limit(50)
+
+    @status = params[:status].presence_in(%w[pending approved returned all]) || "pending"
+    @sort = params[:sort] == "newest" ? "newest" : "oldest"
+    @search = params[:search].to_s.strip
+    @from = parse_date(params[:from])
+    @to = parse_date(params[:to])
+
+    scope = policy_scope(::Certification::Ship)
+              .includes(:reviewer, project: { memberships: :user })
+    scope = scope.where(status: @status) unless @status == "all"
+    scope = scope.where("certification_ship_reviews.created_at >= ?", @from.beginning_of_day) if @from
+    scope = scope.where("certification_ship_reviews.created_at <= ?", @to.end_of_day) if @to
+    scope = apply_search(scope) if @search.present?
+
+    @ships = scope
+               .order(created_at: @sort == "newest" ? :desc : :asc)
+               .limit(100)
+
+    @stats = ::Certification::Ship.dashboard_stats
+    @lb_period = params[:lb].presence_in(%w[daily weekly alltime]) || "daily"
+    @leaderboards = {
+      "daily" => ::Certification::Ship.leaderboard(:daily),
+      "weekly" => ::Certification::Ship.leaderboard(:weekly),
+      "alltime" => ::Certification::Ship.leaderboard(:alltime)
+    }
   end
 
   def show
@@ -62,6 +82,22 @@ class Admin::Certification::ShipsController < Admin::Certification::ApplicationC
 
   def parse_skip_ids
     params[:skip].to_s.split(",").map(&:to_i).reject(&:zero?)
+  end
+
+  def parse_date(value)
+    Date.parse(value.to_s)
+  rescue ArgumentError, TypeError
+    nil
+  end
+
+  # Numeric input matches a review id or a project title; text matches title.
+  def apply_search(scope)
+    if @search.match?(/\A\d+\z/)
+      scope.where("certification_ship_reviews.id = :id OR projects.title ILIKE :q",
+                  id: @search.to_i, q: "%#{@search}%")
+    else
+      scope.where("projects.title ILIKE ?", "%#{@search}%")
+    end
   end
 
   def ship_params
