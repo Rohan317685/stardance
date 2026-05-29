@@ -33,12 +33,16 @@ class Admin::Certification::ShipsController < Admin::Certification::ApplicationC
 
   def show
     authorize @ship
+    @reviewed_today = ::Certification::Ship.reviewed_today(current_user)
   end
 
   def update
     authorize @ship
     if @ship.update(ship_params)
-      redirect_to next_admin_certification_ships_path, notice: "Verdict recorded."
+      verb = @ship.approved? ? "Approved" : "Returned"
+      count = ::Certification::Ship.reviewed_today(current_user)
+      redirect_to next_admin_certification_ships_path,
+                  notice: "#{verb} “#{@ship.project.title}.” That's #{count} reviewed today. Keep going!"
     else
       render :show, status: :unprocessable_entity
     end

@@ -99,6 +99,15 @@ module Certification
            .map { |name, count| { name: name, count: count } }
     end
 
+    # How many reviews this reviewer has decided today. Drives the momentum
+    # counter on the review page, so it's scoped to the user, not the queue.
+    def self.reviewed_today(user, now: Time.current)
+      where(reviewer_id: user.id)
+        .where.not(status: :pending)
+        .where(decided_at: now.beginning_of_day..)
+        .count
+    end
+
     before_save :stamp_claimed_at, if: -> { will_save_change_to_reviewer_id? && reviewer_id.present? && claimed_at.nil? }
     before_save :stamp_decided_at, if: -> { will_save_change_to_status? && status_change&.last != "pending" && decided_at.nil? }
     after_save :apply_verdict_to_project!, if: :saved_change_to_status?

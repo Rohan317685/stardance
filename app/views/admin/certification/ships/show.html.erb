@@ -9,6 +9,15 @@
   <div class="app-layout__main app-layout__main--wide ship-review">
     <%= link_to "← back to queue", admin_certification_ships_path, class: "ship-review__back" %>
 
+    <div class="ship-review__momentum" role="status" aria-live="polite">
+      <% if @reviewed_today.zero? %>
+        <span class="ship-review__momentum-label">First review of the day. Let's go.</span>
+      <% else %>
+        <span class="ship-review__momentum-count"><%= @reviewed_today %></span>
+        <span class="ship-review__momentum-label">reviewed today. Keep the momentum going.</span>
+      <% end %>
+    </div>
+
     <header class="ship-review__header">
       <div class="ship-review__title">
         <h1><%= @ship.project.title %></h1>
