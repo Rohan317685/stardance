@@ -44,12 +44,25 @@ class Post::ShipEvent < ApplicationRecord
   VOTES_REQUIRED_FOR_PAYOUT = 12
   VOTES_TO_LEAVE_POOL = VOTES_REQUIRED_FOR_PAYOUT
   VOTE_COST_PER_SHIP = 15
+  BODY_MAX_LENGTH = Post::Devlog::BODY_MAX_LENGTH
+  REVIEW_INSTRUCTIONS_MAX_LENGTH = 2_000
 
   has_one :project, through: :post
   has_many :project_memberships, through: :project, source: :memberships
   has_many :project_members, through: :project, source: :users
 
   has_many :votes, foreign_key: :ship_event_id, dependent: :nullify, inverse_of: :ship_event
+  has_many :vote_assignments, class_name: "Vote::Assignment",
+                              foreign_key: :ship_event_id,
+                              dependent: :destroy,
+                              inverse_of: :ship_event
+
+  has_one :mission_submission, class_name: "Mission::Submission",
+                               foreign_key: :ship_event_id,
+                               inverse_of: :ship_event,
+                               dependent: :destroy
+
+  after_update :sync_mission_submission_status, if: :saved_change_to_certification_status?
 
   scope :current_voting_scale, -> { where(voting_scale_version: CURRENT_VOTING_SCALE_VERSION) }
   scope :legacy_voting_scale, -> { where(voting_scale_version: LEGACY_VOTING_SCALE_VERSION) }
@@ -57,7 +70,8 @@ class Post::ShipEvent < ApplicationRecord
   after_commit :decrement_user_vote_balance, on: :create
 
   validates :body, presence: { message: "Update message can't be blank" }
-  validates :review_instructions, length: { maximum: 2000 }, allow_blank: true
+  validates :body, length: { maximum: BODY_MAX_LENGTH }, on: :create
+  validates :review_instructions, length: { maximum: REVIEW_INSTRUCTIONS_MAX_LENGTH }, allow_blank: true
   validate :project_can_be_shipped, on: :create
   has_paper_trail ignore: [ :votes_count, :synced_at ]
 
@@ -121,5 +135,22 @@ class Post::ShipEvent < ApplicationRecord
     return unless post&.user
 
     post.user.increment!(:vote_balance, -VOTE_COST_PER_SHIP)
+  end
+
+  # Drives the Mission::Submission state machine off ship cert transitions.
+  # See docs/missions-design.md "Certification interaction" for the spec.
+  def sync_mission_submission_status
+    submission = mission_submission
+    return unless submission
+
+    case certification_status
+    when "approved"
+      submission.certify! if submission.may_certify?
+    when "rejected"
+      if submission.may_fail_certification?
+        submission.update_columns(rejection_message: "Ship was not certified — see ship feedback for details.")
+        submission.fail_certification!
+      end
+    end
   end
 end

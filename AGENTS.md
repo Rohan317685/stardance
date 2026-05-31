@@ -51,7 +51,33 @@ When coding please do not produce unnecessary code or any dead code, if u make d
 
 Please use BEM SCSS styling when writing SCSS: https://getbem.com/introduction/
 
+## Codebase heritage: Flavortown → Stardance
+
+This codebase is being re-used from a previous Hack Club program called
+**Flavortown**, which used a brown-wood, food-themed visual identity. The goal
+is to turn it into a new program called **Stardance**, which is space-themed and
+uses the new branding guidelines (see the theming section below and
+[docs/branding.md](docs/branding.md)).
+
+When implementing something:
+
+- **Reuse if clean.** If a previous Flavortown component / partial / helper
+  already does what you need and is well-written, prefer reusing it.
+- **Otherwise re-implement and purge.** If the old code is messy or tightly
+  coupled to the food/wood theme, re-implement it cleanly and delete the old
+  system rather than layering on top of it. Don't leave dead Flavortown code
+  behind.
+- **Always use Stardance branding, never Flavortown.** Anything you implement
+  must use the new Stardance branding — even when reusing a component that
+  already exists, update it so it uses the new space-themed palette, type, and
+  patterns. Never carry the old brown-wood / food styling forward.
+
 ## Stardance themeing
+
+The full visual identity spec — palette, type scale, container sets, button
+states, form patterns — lives in [docs/branding.md](docs/branding.md). Read it
+before doing visual work; it's the source of truth and is mirrored from the
+Figma design system page.
 
 Design tokens (background, brand palette, spacing, fonts, font sizes) are defined as CSS variables in [app/assets/stylesheets/config/_variables.scss](app/assets/stylesheets/config/_variables.scss). Reference them via `var(--token-name)` rather than inlining hex / rem values.
 
@@ -67,7 +93,8 @@ Brand palette — use the `--color-brand-*` variables in code:
 - `#FFD598` — `--color-brand-peach`
 - `#FFF8D5` — `--color-brand-cream`
 - `#FFFCF4` — `--color-brand-off-white`
+- `#FFB07A` — `--color-brand-orange` — **reserved**: admin / manageable-by-viewer marker only (2px dashed border, see [docs/branding.md §1.5](docs/branding.md)). Don't use it for general accents.
 
-When trying to choose a color, please try to choose from one of the colors above by default. If not, you can fall back to similar pastel colors. Try to avoid colors that are too saturated / deep.
+When trying to choose a color, please try to choose from one of the colors above by default. If not, you can fall back to similar pastel colors. Try to avoid colors that are too saturated / deep. See [docs/branding.md](docs/branding.md) for the four "set" container surfaces, highlight tones, and which accent applies where.
 
-For the font, use Exo 2 for most body text and title text, with emphasis being in Playfair Display italics.
+For the font, use Exo 2 for most body text and title text, with emphasis being in Playfair Display italics. The full type scale (Title, Title 2, Heading, Small heading, Body, Label) with sizes and weights is documented in [docs/branding.md](docs/branding.md).

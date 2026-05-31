@@ -1,14 +1,18 @@
 class Projects::DevlogsController < ApplicationController
-  before_action :set_project
-  before_action :set_devlog, only: %i[edit update destroy versions]
-  before_action :require_hackatime_project, only: %i[new create]
-  before_action :sync_hackatime_projects, only: %i[new create]
-  before_action :load_preview_time, only: %i[new]
-  before_action :require_preview_time, only: %i[new]
+  TEST_TIME_SECONDS = 15.minutes.to_i
 
-  def new
-    authorize @project, :create_devlog?
-    @devlog = Post::Devlog.new
+  before_action :set_project
+  before_action :set_devlog, only: %i[show edit update destroy versions]
+  before_action :require_hackatime_project, only: %i[create]
+  before_action :sync_hackatime_projects, only: %i[create]
+
+  skip_before_action :remember_page, only: %i[preview_time]
+
+  def show
+    authorize @devlog
+    @body_class = "app-layout-page"
+    @post = @project.posts.visible_to(current_user).find_by!(postable: @devlog)
+    @comments = @devlog.comments.not_deleted.includes(:user).order(created_at: :asc)
   end
 
   def create
@@ -16,41 +20,31 @@ class Projects::DevlogsController < ApplicationController
 
     current_user.with_advisory_lock("devlog_create", timeout_seconds: 10) do
       load_preview_time
-      return redirect_to @project, alert: "Could not calculate your coding time. Please try again." unless @preview_time.present?
+      return redirect_to project_path(@project), alert: "Could not calculate your coding time. Please try again." unless @preview_time.present?
 
       @devlog = Post::Devlog.new(devlog_params)
       @devlog.duration_seconds = @preview_seconds
-      @devlog.hackatime_projects_key_snapshot = @project.hackatime_keys.join(",")
+      @devlog.hackatime_projects_key_snapshot = test_time_granted? ? "test" : @project.hackatime_keys.join(",")
 
       if @devlog.save
         Post.create!(project: @project, user: current_user, postable: @devlog)
-        Rails.cache.delete("user/#{current_user.id}/devlog_seconds_total")
-        Rails.cache.delete("user/#{current_user.id}/devlog_seconds_today/#{Time.zone.today}")
+        session.delete(test_time_session_key) if test_time_granted?
         flash[:notice] = "Devlog created successfully"
 
-        unless @devlog.tutorial?
-          existing_non_tutorial_devlogs = Post::Devlog.joins(:post)
-                                                      .where(posts: { user_id: current_user.id })
-                                                      .where(tutorial: false)
-                                                      .where.not(id: @devlog.id)
-          if existing_non_tutorial_devlogs.empty?
-            FunnelTrackerService.track(
-              event_name: "devlog_created",
-              user: current_user,
-              properties: { devlog_id: @devlog.id, project_id: @project.id }
-            )
-          end
-        end
-
-        if current_user.complete_tutorial_step! :post_devlog
-          tutorial_message OnboardingCopy::FIRST_DEVLOG_POSTED
-        end
-
-        return redirect_to @project
+        return redirect_to project_path(@project)
       else
-        flash.now[:alert] = @devlog.errors.full_messages.to_sentence
-        render :new, status: :unprocessable_entity
+        redirect_back fallback_location: home_path(project_id: @project.id),
+                      alert: @devlog.errors.full_messages.to_sentence
       end
+    end
+  end
+
+  def preview_time
+    authorize @project, :create_devlog?
+    load_preview_time
+    respond_to do |format|
+      format.html { render partial: "projects/devlogs/preview_time", locals: { preview_time: @preview_time, preview_seconds: @preview_seconds } }
+      format.json { render json: { preview_time: @preview_time } }
     end
   end
 
@@ -93,7 +87,7 @@ class Projects::DevlogsController < ApplicationController
         @devlog.create_version!(user: current_user, previous_body: previous_body)
       end
 
-      redirect_to @project, notice: "Devlog updated successfully"
+      redirect_to project_path(@project), notice: "Devlog updated successfully"
     else
       flash.now[:alert] = @devlog.errors.full_messages.to_sentence
       render :edit, status: :unprocessable_entity
@@ -107,7 +101,12 @@ class Projects::DevlogsController < ApplicationController
 
     if project_shipped && !force
       flash[:alert] = "Cannot delete a devlog from a shipped project"
-      redirect_to @project and return
+      redirect_to project_path(@project) and return
+    end
+
+    if @devlog.hackatime_projects_key_snapshot == "test" && !Flipper.enabled?(:delete_test_devlog, current_user)
+      flash[:alert] = "Test-time devlogs cannot be deleted"
+      redirect_to project_path(@project) and return
     end
 
     if force && project_shipped
@@ -127,7 +126,7 @@ class Projects::DevlogsController < ApplicationController
     end
 
     @devlog.soft_delete!
-    redirect_to @project, notice: "Devlog deleted successfully"
+    redirect_to project_path(@project), notice: "Devlog deleted successfully"
   end
 
   def versions
@@ -148,31 +147,22 @@ class Projects::DevlogsController < ApplicationController
                       .postable
   end
 
-
   def require_hackatime_project
+    return if test_time_granted?
+
     unless @project.hackatime_keys.present?
-      redirect_to edit_project_path(@project), alert: "You must link at least one Hackatime project before posting a devlog" and return
+      redirect_to project_path(@project), alert: "You must link at least one Hackatime project before posting a devlog" and return
     end
   end
 
   def sync_hackatime_projects
+    return if test_time_granted?
+
     owner = @project.memberships.owner.first&.user
     return unless owner
 
     owner.try_sync_hackatime_data!
     @project.reload
-  end
-
-  def require_preview_time
-    unless @preview_time.present?
-      @retry_count = (params[:retry] || 0).to_i
-      if @retry_count < 3
-        @show_loading = true
-        render :loading and return
-      else
-        redirect_to @project, alert: "Could not fetch your coding time from Hackatime after multiple attempts. Please ensure Hackatime is tracking your project." and return
-      end
-    end
   end
 
   def devlog_params
@@ -188,26 +178,41 @@ class Projects::DevlogsController < ApplicationController
     @project.reload
     hackatime_keys = @project.hackatime_keys
 
-    Rails.logger.info "DevlogsController#load_preview_time: project=#{@project.id}, hackatime_keys=#{hackatime_keys.inspect}"
-
+    return apply_test_time_preview if test_time_granted? && hackatime_keys.blank?
     return @preview_time = nil unless hackatime_keys.present?
 
-    hackatime_uid = current_user.hackatime_identity&.uid
-    return @preview_time = nil unless hackatime_uid.present?
+    seconds = @project.seconds_coded_in_devlog_window(current_user.hackatime_identity&.uid)
+    return apply_test_time_preview if test_time_granted? && seconds.nil?
+    return @preview_time = nil if seconds.nil?
 
-    total_seconds = HackatimeService.fetch_total_seconds_for_projects(hackatime_uid, hackatime_keys)
-    return @preview_time = nil unless total_seconds
-
-    already_logged = Post::Devlog.where(
-      id: @project.posts.where(postable_type: "Post::Devlog").select("postable_id::bigint")
-    ).sum(:duration_seconds) || 0
-
-    @preview_seconds = [ total_seconds - already_logged, 0 ].max
-    hours = @preview_seconds / 3600
-    minutes = (@preview_seconds % 3600) / 60
-    @preview_time = "#{hours}h #{minutes}m"
+    @preview_seconds = seconds
+    apply_test_time_preview if test_time_granted? && @preview_seconds < TEST_TIME_SECONDS
+    @preview_time ||= format_preview_time(@preview_seconds)
   rescue => e
     Rails.logger.error "Failed to load preview time: #{e.message}"
-    @preview_time = nil
+    if test_time_granted?
+      apply_test_time_preview
+    else
+      @preview_time = nil
+    end
+  end
+
+  def apply_test_time_preview
+    @preview_seconds = [ @preview_seconds.to_i, TEST_TIME_SECONDS ].max
+    @preview_time = format_preview_time(@preview_seconds)
+  end
+
+  def format_preview_time(seconds)
+    hours = seconds / 3600
+    minutes = (seconds % 3600) / 60
+    "#{hours}h #{minutes}m"
+  end
+
+  def test_time_granted?
+    session[test_time_session_key].present?
+  end
+
+  def test_time_session_key
+    "test_time_project_#{@project.id}"
   end
 end

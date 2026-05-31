@@ -1,0 +1,143 @@
+// Right Rail
+
+.discover-rail {
+  position: fixed;
+  right: 21px;
+  top: 29px;
+  width: 264px;
+  max-height: calc(100vh - 64px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+
+  @media (max-width: 1280px) {
+    display: none;
+  }
+}
+
+.discover-rail__search {
+  position: relative;
+}
+
+.discover-rail__search-input {
+  width: 100%;
+  height: 39px;
+  padding: 0 35px 0 12px;
+  border: 2px solid var(--color-space-text);
+  border-radius: var(--profile-radius);
+  background: transparent;
+  color: var(--color-space-text);
+  font-family: inherit;
+  font-size: var(--font-size-s);
+
+  &::placeholder {
+    color: var(--color-space-text);
+    opacity: 0.85;
+  }
+}
+
+.discover-rail__search-icon {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  color: var(--color-space-text);
+  pointer-events: none;
+}
+
+.discover-rail__section {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  margin-top: 7px;
+}
+
+.discover-rail__heading {
+  margin: 0;
+  font-size: var(--font-size-s);
+  font-weight: 400;
+  color: var(--color-space-text);
+}
+
+.discover-rail__placeholder {
+  background: rgba(217, 217, 217, 0.5);
+  border-radius: var(--profile-radius);
+  height: 59px;
+
+  &--tall {
+    height: 238px;
+  }
+}
+
+.discover-rail__placeholder-text {
+  background: rgba(217, 217, 217, 0.08);
+  border-radius: 8px;
+  color: var(--color-brand-off-white);
+  font-size: 0.9rem;
+  margin: 0;
+  opacity: 0.75;
+  padding: 0.7rem 0.9rem;
+}
+
+.discover-rail__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.discover-rail__card {
+  background: rgba(217, 217, 217, 0.18);
+  border-radius: 8px;
+  color: var(--color-space-text);
+  min-height: 48px;
+  padding: 0.6rem 0.75rem;
+}
+
+.discover-rail__card-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.discover-rail__card-body {
+  color: var(--color-brand-off-white);
+  font-size: 0.8rem;
+  margin: 0.15rem 0 0;
+  opacity: 0.85;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.discover-rail__link {
+  align-self: flex-end;
+  color: var(--color-space-text);
+  font-size: 0.85rem;
+  text-decoration: underline;
+
+  &:hover,
+  &:focus-visible {
+    color: var(--color-brand-highlight);
+  }
+}
+
+.discover-rail__section--wishlist {
+  .shop-goals__container {
+    background: transparent;
+    border: 0;
+    margin: 0;
+    padding: 0;
+  }
+
+  .shop-goals__items {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+  }
+}

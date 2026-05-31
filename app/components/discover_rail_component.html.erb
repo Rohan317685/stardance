@@ -1,0 +1,10 @@
+<aside class="discover-rail" aria-label="Discover">
+  <div class="discover-rail__search">
+    <input type="text" class="discover-rail__search-input" placeholder="Search…" aria-label="Search" autocomplete="off" disabled>
+    <%= helpers.inline_svg_tag "icons/search.svg", class: "discover-rail__search-icon" %>
+  </div>
+
+  <% widgets.each do |widget| %>
+    <%= render widget %>
+  <% end %>
+</aside>

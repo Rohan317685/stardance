@@ -1,5 +1,4 @@
 class FollowsController < ApplicationController
-  before_action :require_logged_in
   before_action :load_target
 
   def create
@@ -9,7 +8,7 @@ class FollowsController < ApplicationController
     follow.save unless follow.persisted?
 
     respond_to do |format|
-      format.html { redirect_to user_path(@target) }
+      format.html { redirect_to profile_path(@target.display_name) }
       format.json { render json: { following: true, follower_count: @target.followers.count } }
     end
   end
@@ -20,7 +19,7 @@ class FollowsController < ApplicationController
     current_user.follows_as_follower.where(followed: @target).destroy_all
 
     respond_to do |format|
-      format.html { redirect_to user_path(@target) }
+      format.html { redirect_to profile_path(@target.display_name) }
       format.json { render json: { following: false, follower_count: @target.followers.count } }
     end
   end
@@ -29,11 +28,5 @@ class FollowsController < ApplicationController
 
   def load_target
     @target = User.find(params[:user_id])
-  end
-
-  def require_logged_in
-    return if current_user
-
-    redirect_to root_path, alert: "Please sign in first."
   end
 end

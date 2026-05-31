@@ -1,19 +1,89 @@
 class ProjectsController < ApplicationController
-  before_action :set_project_minimal, only: [ :edit, :update, :destroy, :mark_fire, :unmark_fire ]
-  before_action :set_project, only: [ :show, :readme ]
+  # Mission + payout-votes render as discover-rail modules on the project page.
+  # The expanded mission module also previews the next guide step.
+  discover_rail_widgets :project_mission_expanded, :ship_intro, :payout_votes,
+                        context: -> { { project: @project, votes_for_payout: @votes_for_payout } }
+
+  before_action :set_project_minimal, only: [ :edit, :update, :destroy ]
+  before_action :set_project, only: [ :show, :readme, :add_test_time ]
+  before_action :redirect_guest_owner_to_link!, only: [ :show, :readme, :edit, :update ]
 
   def show
     authorize @project
 
-    load_posts = -> {
-      @project.posts
-               .includes(:user, postable: [ :attachments_attachments ])
-               .order(created_at: :desc)
-               .select { |post| post.postable.present? }
+    @body_class = "app-layout-page"
+    if params[:welcome] == "1"
+      welcomed_ids = Array(session[:project_welcomed_ids])
+      @body_class += " project-welcoming" unless welcomed_ids.include?(@project.id)
+      session[:project_welcomed_ids] = (welcomed_ids + [ @project.id ]).last(20)
+
+      # Strip wizard pages from the back-stack so the project page's back
+      # button skips the (one-time) setup flow.
+      if session[:previous_pages].is_a?(Array)
+        session[:previous_pages] = session[:previous_pages].reject { |p| p.to_s.include?("/projects/setup") }
+      end
+    end
+
+    prepare_project_show_context
+  end
+
+  def prepare_project_show_context
+    @members = @project.users.to_a
+    @is_member = current_user && @members.include?(current_user)
+    @active_nav_slug = @is_member ? "projects" : "home"
+    @can_edit_project = @is_member && policy(@project).update?
+    @follower_count = @project.project_follows.size
+    @viewer_follow = current_user && @project.project_follows.find_by(user_id: current_user.id)
+    @total_hours = (@project.duration_seconds / 3600.0).round
+    @test_time_granted = session[test_time_session_key].present?
+    @hackatime_times = {}
+
+    if @is_member && current_user
+      @composer_devlog = Post::Devlog.new
+      @composer_projects = current_user.projects.order(updated_at: :desc)
+
+      @hackatime_linked = current_user.hackatime_identity.present?
+
+      if @hackatime_linked
+        @linked_hackatime_projects = @project.hackatime_projects
+        @all_hackatime_projects = current_user.hackatime_projects
+        result = current_user.try_sync_hackatime_data!
+        @hackatime_times = result&.dig(:projects) || {}
+
+        linked_ids = @linked_hackatime_projects.map(&:id).to_set
+        taken_project_ids = @all_hackatime_projects.map(&:project_id).compact.uniq - [ @project.id ]
+        taken_titles = Project.where(id: taken_project_ids).pluck(:id, :title).to_h
+        @hackatime_dropdown_items = @all_hackatime_projects.map do |hp|
+          seconds = @hackatime_times[hp.name] || 0
+          taken = hp.project_id.present? && hp.project_id != @project.id
+          {
+            id: hp.id,
+            name: hp.name,
+            seconds: seconds,
+            hours: (seconds / 3600.0).round(1),
+            taken: taken,
+            taken_by: taken ? taken_titles[hp.project_id] : nil,
+            linked: linked_ids.include?(hp.id)
+          }
+        end
+      end
+    end
+
+
+    load_posts = ->(include_deleted_devlogs: false) {
+      scope = @project.posts
+                       .visible_to(current_user)
+                       .includes(postable: [ :attachments_attachments ])
+                       .order(created_at: :desc)
+      unless include_deleted_devlogs
+        scope = scope.left_outer_joins("LEFT JOIN post_devlogs ON posts.postable_type = 'Post::Devlog' AND posts.postable_id = post_devlogs.id")
+                     .where("posts.postable_type != 'Post::Devlog' OR post_devlogs.deleted_at IS NULL")
+      end
+      scope.select { |post| post.postable.present? }
     }
 
-    @posts = if current_user&.can_see_deleted_devlogs?
-      Post::Devlog.unscoped { load_posts.call }
+    @posts = if policy(@project).view_deleted_devlogs?
+      load_posts.call(include_deleted_devlogs: true)
     else
       load_posts.call
     end
@@ -22,9 +92,25 @@ class ProjectsController < ApplicationController
       @posts = @posts.reject { |post| post.postable_type == "Post::GitCommit" }
     end
 
-    unless current_user&.admin?
-      @posts = @posts.reject { |post| post.postable_type == "Post::ShipEvent" && post.postable.certification_status != "approved" }
-    end
+    @posts = @posts.reject { |post| post.postable_type == "Post::ShipEvent" && post.postable.certification_status == "rejected" }
+
+    @show_project_onboarding = @is_member && @posts.empty?
+    @project_onboarding_mission = @project.current_mission
+
+    @show_project_tour = params[:welcome] == "1" && current_user.present? && @is_member &&
+                         current_user.projects.count == 1 && !session[:project_tour_seen]
+
+    session[:project_tour_seen] = true if @show_project_tour
+
+    # Drives the post-Hackatime-link onboarding overlay: the user linked
+    # Hackatime at the account level, this is their first/only project, but
+    # they haven't attached a Hackatime project to it yet. Stateful (no
+    # session flag) so it keeps prompting until the user links a project.
+    @show_first_hackatime_tour = current_user.present? && @is_member &&
+                                 @hackatime_linked &&
+                                 current_user.projects.count == 1 &&
+                                 @project.hackatime_keys.blank? &&
+                                 !@show_project_tour
 
     if current_user
       devlog_ids = @posts.select { |p| p.postable_type == "Post::Devlog" }.map(&:postable_id)
@@ -35,14 +121,12 @@ class ProjectsController < ApplicationController
 
     ahoy.track "Viewed project", project_id: @project.id
 
-    latest_ship_post = @posts.find { |post| post.postable_type == "Post::ShipEvent" }
-    latest_ship_event = latest_ship_post&.postable
+    @latest_ship_post = @posts.find { |post| post.postable_type == "Post::ShipEvent" }
+    latest_ship_event = @latest_ship_post&.postable
 
     @votes_for_payout = nil
     if current_user.present?
       is_owner = @project.memberships.where(role: :owner, user_id: current_user.id).exists?
-
-      @show_ai_coding_time_ignored_card = is_owner && !current_user.has_dismissed?("ai_coding_time_ignored_card")
 
       if is_owner &&
           latest_ship_event.present? &&
@@ -61,11 +145,59 @@ class ProjectsController < ApplicationController
       end
     end
   end
+  private :prepare_project_show_context
+
+  def add_test_time
+    authorize @project
+
+    unless Flipper.enabled?(:test_time, current_user)
+      redirect_back fallback_location: project_path(@project), alert: "Test time is not available"
+      return
+    end
+
+    # NB: query the table directly rather than current_user.hackatime_projects —
+    # that reader is overridden (User::HackatimeSync) to only surface real synced
+    # projects, so it would never find the test-time row and a second click would
+    # try to insert a duplicate, tripping the (user_id, name) uniqueness check.
+    hackatime_project = User::HackatimeProject.find_or_initialize_by(user: current_user, name: test_time_hackatime_project_name)
+    hackatime_project.project = @project
+    hackatime_project.save!
+
+    session[test_time_session_key] = true
+    redirect_back fallback_location: project_path(@project),
+                  notice: "15 minutes of test time added - post your devlog now"
+  rescue ActiveRecord::RecordInvalid => e
+    redirect_back fallback_location: project_path(@project),
+                  alert: e.record.errors.full_messages.to_sentence
+  end
 
   def new
+    if current_user&.projects&.none?
+      # /projects/new just bounces to setup for first-timers — pop it from the
+      # back-stack so the idea step's back button skips over it.
+      if session[:previous_pages].is_a?(Array)
+        session[:previous_pages].delete_if { |p| p.to_s.include?("/projects/new") }
+      end
+      redirect_to projects_setup_path and return
+    end
+
     @project = Project.new
     authorize @project
-    load_project_times
+    @missions = Mission.available
+                       .where.not(id: missions_user_already_has_a_project_on)
+                       .includes(:icon_attachment, :banner_attachment)
+                       .order(featured_at: :desc)
+                       .limit(8)
+  end
+
+  def missions_user_already_has_a_project_on
+    return [] unless current_user
+    current_user.projects
+                .where(deleted_at: nil)
+                .joins(:mission_attachments)
+                .where(project_mission_attachments: { detached_at: nil, deleted_at: nil })
+                .pluck("project_mission_attachments.mission_id")
+                .uniq
   end
 
   def create
@@ -90,39 +222,29 @@ class ProjectsController < ApplicationController
 
     if success
       flash[:notice] = "Project created successfully"
-      current_user.complete_tutorial_step! :create_project
-
-      unless @project.tutorial?
-        existing_non_tutorial_projects = current_user.projects.where(tutorial: false).where.not(id: @project.id)
-        if existing_non_tutorial_projects.empty?
-          FunnelTrackerService.track(
-            event_name: "project_created",
-            user: current_user,
-            properties: { project_id: @project.id }
-          )
-        end
-      end
 
       project_hours = @project.total_hackatime_hours
-      if project_hours > 0
-        tutorial_message OnboardingCopy::PROJECT_CREATED_WITH_HOURS.call(
-          helpers.distance_of_time_in_words(project_hours.hours)
-        )
-      else
-        tutorial_message OnboardingCopy::PROJECT_CREATED_NO_HOURS
+
+      if (slug = params[:mission_slug].presence)
+        mission = Mission.find_by(slug: slug)
+        @project.missions << mission if mission
       end
 
-      redirect_to @project
+      first_project = current_user.projects.count == 1
+      redirect_to project_path(@project, first_project ? { welcome: 1 } : {})
     else
       flash[:alert] = "Failed to create project: #{@project.errors.full_messages.join(', ')}"
-      load_project_times
+      @missions = Mission.available
+                         .includes(:icon_attachment, :banner_attachment)
+                         .order(featured_at: :desc)
+                         .limit(8)
       render :new, status: :unprocessable_entity
     end
   end
 
   def edit
     authorize @project
-    load_project_times
+    redirect_to project_path(@project, editing: true)
   end
 
   def update
@@ -135,11 +257,37 @@ class ProjectsController < ApplicationController
     link_hackatime_projects if success
     # 2nd check w/ @project.errors.empty? is not redudant. this is ensures that hackatime is linked!
     if success && @project.errors.empty?
-      flash[:notice] = "Project updated successfully"
-      redirect_to url_from(params[:return_to]) || @project
+      respond_to do |format|
+        format.turbo_stream do
+          if params[:return_to].present?
+            flash[:notice] = "Project updated successfully"
+            redirect_to url_from(params[:return_to])
+          else
+            flash.now[:notice] = "Project updated successfully"
+            render turbo_stream: turbo_stream.update("flash-region", partial: "shared/flash")
+          end
+        end
+        format.html do
+          flash[:notice] = "Project updated successfully"
+          redirect_to url_from(params[:return_to]) || project_path(@project)
+        end
+      end
     else
-      flash.now[:alert] = "Failed to update project: #{@project.errors.full_messages.join(', ')}"
-      render_update_error
+      respond_to do |format|
+        format.turbo_stream do
+          if params[:return_to].present?
+            flash[:alert] = "Failed to update project: #{@project.errors.full_messages.join(', ')}"
+            redirect_to url_from(params[:return_to])
+          else
+            flash.now[:alert] = "Failed to update project: #{@project.errors.full_messages.join(', ')}"
+            render turbo_stream: turbo_stream.update("flash-region", partial: "shared/flash"), status: :unprocessable_entity
+          end
+        end
+        format.html do
+          flash[:alert] = "Failed to update project: #{@project.errors.full_messages.join(', ')}"
+          redirect_to url_from(params[:return_to]) || edit_project_path(@project)
+        end
+      end
     end
   end
 
@@ -164,108 +312,22 @@ class ProjectsController < ApplicationController
       end
 
       @project.soft_delete!(force: force)
-      current_user.revoke_tutorial_step! :create_project if current_user.projects.empty?
       flash[:notice] = "Project deleted successfully"
-      redirect_to user_path(current_user, tab: "projects")
+      redirect_to profile_projects_path(current_user.display_name)
     rescue ActiveRecord::RecordInvalid => e
       flash[:alert] = e.record.errors.full_messages.to_sentence
-      redirect_to @project
-    end
-  end
-
-  def mark_fire
-    authorize :admin, :manage_projects?
-
-    return render(json: { message: "Project not found" }, status: :not_found) unless @project
-
-    if @project.users.include?(current_user)
-      return render(json: { message: "You cannot mark your own project as a Super Star." }, status: :forbidden)
-    end
-
-    if current_user.fraud_dept? && !current_user.admin?
-      if @project.users.any? { |u| u.fraud_dept? }
-        return render(json: { message: "You cannot mark a fellow fraud department member's project as a Super Star." }, status: :forbidden)
-      end
-    end
-
-    PaperTrail.request(whodunnit: current_user.id) do
-      fire_event = Post::FireEvent.create(
-        body: "⭐ #{current_user.display_name} marked your project as a Super Star! As a prize for your great work, look out for a bonus prize in the mail :)"
-      )
-
-      unless fire_event.persisted?
-        render json: { message: fire_event.errors.full_messages.to_sentence.presence || "Failed to mark project as a Super Star" }, status: :unprocessable_entity
-        next
-      end
-
-      post = @project.posts.create(user: current_user, postable: fire_event)
-
-      if post.persisted?
-        @project.mark_fire!(current_user)
-
-        PaperTrail::Version.create!(
-          item_type: "Project",
-          item_id: @project.id,
-          event: "mark_fire",
-          whodunnit: current_user.id,
-          object_changes: {
-            admin_action: [ nil, "mark_fire" ],
-            marked_fire_by_id: [ nil, current_user.id ],
-            created_post_id: [ nil, post.id ]
-          }
-        )
-
-        Project::PostToMagicJob.perform_later(@project)
-        Project::MagicHappeningLetterJob.perform_later(@project)
-
-        @project.users.each do |user|
-          SendSlackDmJob.perform_later(
-            user.slack_id,
-            blocks_path: "notifications/projects/super_star",
-            locals: { project: @project }
-          )
-        end
-
-        render json: { message: "Project marked as ⭐!", fire: true }, status: :ok
-      else
-        errors = (post.errors.full_messages + fire_event.errors.full_messages).uniq
-        render json: { message: errors.to_sentence.presence || "Failed to mark project as a Super Star" }, status: :unprocessable_entity
-      end
-    end
-  end
-
-  def unmark_fire
-    authorize :admin, :manage_projects?
-
-    return render(json: { message: "Project not found" }, status: :not_found) unless @project
-
-    PaperTrail.request(whodunnit: current_user.id) do
-      @project.unmark_fire!
-
-      PaperTrail::Version.create!(
-        item_type: "Project",
-        item_id: @project.id,
-        event: "unmark_fire",
-        whodunnit: current_user.id,
-        object_changes: {
-          admin_action: [ nil, "unmark_fire" ]
-        }
-      )
-
-      render json: { message: "Project unmarked as Super Star", fire: false }, status: :ok
+      redirect_to project_path(@project)
     end
   end
 
   def follow
-    return redirect_to(project_path(params[:id]), alert: "Please sign in first.") unless current_user
-
     @project = Project.find(params[:id])
-    authorize @project, :show?
+    authorize @project, :follow?
 
     follow = current_user.project_follows.build(project: @project)
     if follow.save
-      @project.users.each do |member|
-        if member.send_notifications_for_new_followers && current_user.slack_id && member.slack_id
+      @project.users.includes(:preference).each do |member|
+        if member.preference.send_notifications_for_new_followers && current_user.slack_id && member.slack_id
           SendSlackDmJob.perform_later(
             member.slack_id,
             "#{current_user.display_name} is now following your project #{@project.title}!",
@@ -278,29 +340,27 @@ class ProjectsController < ApplicationController
           )
         end
       end
-      redirect_to @project, notice: "You are now following this project."
+      redirect_to project_path(@project), notice: "You are now following this project."
     else
-      redirect_to @project, alert: follow.errors.full_messages.to_sentence
+      redirect_to project_path(@project), alert: follow.errors.full_messages.to_sentence
     end
   end
 
   def unfollow
-    return redirect_to(project_path(params[:id]), alert: "Please sign in first.") unless current_user
-
     @project = Project.find(params[:id])
-    authorize @project, :show?
+    authorize @project, :follow?
 
     follow = current_user.project_follows.find_by(project: @project)
     if follow&.destroy
-      redirect_to @project, notice: "You have unfollowed this project."
+      redirect_to project_path(@project), notice: "You have unfollowed this project."
     else
-      redirect_to @project, alert: "Could not unfollow."
+      redirect_to project_path(@project), alert: "Could not unfollow."
     end
   end
 
   def readme
     unless turbo_frame_request?
-      redirect_to @project
+      redirect_to project_path(@project)
       return
     end
 
@@ -329,8 +389,15 @@ class ProjectsController < ApplicationController
     @project = Project.find(params[:id])
   end
 
+  def redirect_guest_owner_to_link!
+    return unless current_user&.guest?
+    return unless @project&.memberships&.exists?(user_id: current_user.id, role: :owner)
+
+    redirect_to projects_setup_link_account_path, alert: "Finish setting up your account to keep working on your project."
+  end
+
   def project_params
-    params.require(:project).permit(:title, :description, :demo_url, :repo_url, :readme_url, :banner, :ai_declaration)
+    params.require(:project).permit(:title, :description, :demo_url, :repo_url, :readme_url, :banner, :ai_declaration, hackatime_project_ids: [])
   end
 
   def hackatime_project_ids
@@ -445,7 +512,11 @@ class ProjectsController < ApplicationController
   def link_hackatime_projects
     # Unlink hackatime projects that were removed
     @project.hackatime_projects.where.not(id: hackatime_project_ids).find_each do |hp|
-      hp.update(project: nil)
+      unless hp.update(project: nil)
+        hp.errors.full_messages.each do |message|
+          @project.errors.add(:base, "Hackatime project #{hp.name}: #{message}")
+        end
+      end
     end
 
     return if hackatime_project_ids.empty?
@@ -459,20 +530,11 @@ class ProjectsController < ApplicationController
     end
   end
 
-  def load_project_times
-    result = current_user.try_sync_hackatime_data!
-    @project_times = result&.dig(:projects) || {}
+  def test_time_session_key
+    "test_time_project_#{@project.id}"
   end
 
-  def render_update_error
-    if url_from(params[:return_to])&.include?("ships")
-      @last_ship = @project.last_ship_event
-      @devlogs_for_ship = @project.devlog_posts.includes(:user, postable: [ { attachments_attachments: :blob } ])
-      @devlogs_for_ship = @devlogs_for_ship.where("posts.created_at > ?", @last_ship.created_at) if @last_ship
-      @step = 2
-      render "projects/ships/new", status: :unprocessable_entity
-    else
-      render :edit, status: :unprocessable_entity
-    end
+  def test_time_hackatime_project_name
+    "stardance-test-time-#{@project.id}"
   end
 end

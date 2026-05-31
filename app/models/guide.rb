@@ -2,11 +2,12 @@ Guide = Data.define(:slug, :title, :description, :category, :icon, :reading_minu
   include ActiveModel::Conversion
   extend ActiveModel::Naming
 
-  self::CATEGORY_ORDER = %i[shipping craft].freeze
+  self::CATEGORY_ORDER = %i[shipping craft program].freeze
 
   self::CATEGORY_LABELS = {
     shipping: "Shipping",
-    craft: "Craft"
+    craft: "Craft",
+    program: "Program"
   }.freeze
 
   def initialize(params = {})
@@ -42,7 +43,16 @@ Guide = Data.define(:slug, :title, :description, :category, :icon, :reading_minu
       category: :craft,
       icon: "edit",
       reading_minutes: 5,
-      related: %i[what_is_shipping how_to_ship]
+      related: %i[github_repository what_is_shipping how_to_ship]
+    ),
+    new(
+      slug: :github_repository,
+      title: "Create your GitHub repository",
+      description: "Set up a public GitHub repository for your project's code and link it back to Stardance.",
+      category: :craft,
+      icon: "code",
+      reading_minutes: 4,
+      related: %i[good_git_commits great_readme]
     ),
     new(
       slug: :good_git_commits,
@@ -51,7 +61,7 @@ Guide = Data.define(:slug, :title, :description, :category, :icon, :reading_minu
       category: :craft,
       icon: "code",
       reading_minutes: 4,
-      related: %i[great_readme]
+      related: %i[github_repository great_readme]
     ),
     new(
       slug: :devlogs,
@@ -61,6 +71,15 @@ Guide = Data.define(:slug, :title, :description, :category, :icon, :reading_minu
       icon: "edit",
       reading_minutes: 4,
       related: %i[what_is_shipping]
+    ),
+    new(
+      slug: :why_we_ask,
+      title: "Why we ask for your info",
+      description: "What Stardance does with your birthday, region, and address — and what we don't do.",
+      category: :program,
+      icon: "info",
+      reading_minutes: 3,
+      related: []
     )
   ].freeze
 

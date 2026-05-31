@@ -4,11 +4,11 @@
 #
 #  id                                 :bigint           not null, primary key
 #  aasm_state                         :string
-#  accessory_ids                      :bigint           default([]), is an Array
 #  awaiting_periodical_fulfillment_at :datetime
 #  external_ref                       :string
 #  frozen_address_ciphertext          :text
 #  frozen_item_price                  :decimal(6, 2)
+#  frozen_modifiers_price             :integer          default(0), not null
 #  fulfilled_at                       :datetime
 #  fulfilled_by                       :string
 #  fulfillment_cost                   :decimal(6, 2)
@@ -68,7 +68,10 @@ class ShopOrder < ApplicationRecord
   belongs_to :shop_card_grant, optional: true
   belongs_to :parent_order, class_name: "ShopOrder", optional: true
   has_many :accessory_orders, class_name: "ShopOrder", foreign_key: :parent_order_id, dependent: :destroy
+  has_many :shop_order_modifier_selections, dependent: :destroy
+  has_many :selected_modifiers, through: :shop_order_modifier_selections, source: :shop_item_modifier
   has_many :reviews, class_name: "ShopOrderReview", dependent: :destroy
+  has_one :mission_submission, class_name: "Mission::Submission", inverse_of: :shop_order
   belongs_to :warehouse_package, class_name: "ShopWarehousePackage", optional: true
   belongs_to :assigned_to_user, class_name: "User", optional: true
   belongs_to :fulfillment_payout_line, optional: true
@@ -90,6 +93,10 @@ class ShopOrder < ApplicationRecord
   validate :check_stock, on: :create
   validate :check_ship_requirement, on: :create
   validate :check_achievement_requirement, on: :create
+  validate :check_mission_unlock_requirement, on: :create
+  validate :check_mission_prize_requires_redemption, on: :create
+
+  attr_accessor :redeeming_mission_submission
 
   validates :internal_rejection_reason, presence: true, if: :rejected?
   validates :fraud_related_project_id, presence: true, if: :rejected?
@@ -116,7 +123,6 @@ class ShopOrder < ApplicationRecord
     ShopItem::ThirdPartyDigital
     ShopItem::WarehouseItem
     ShopItem::FreeStickers
-    ShopItem::PileOfStickersItem
     ShopItem::SillyItemType
   ].freeze
 
@@ -128,6 +134,18 @@ class ShopOrder < ApplicationRecord
 
   def full_name
     "#{user.display_name}'s order for #{quantity} #{shop_item.name.pluralize(quantity)}"
+  end
+
+  def cancel_by_user
+    return { success: false, error: "Your order can not be canceled" } unless may_refund?
+
+    with_lock do
+      return { success: false, error: "Your order can not be canceled" } unless may_refund?
+
+      refund!
+      accessory_orders.each { |accessory_order| accessory_order.refund! if accessory_order.may_refund? }
+    end
+    { success: true, order: self }
   end
 
   def can_view_address?(viewer)
@@ -266,10 +284,15 @@ class ShopOrder < ApplicationRecord
     total_cost + (accessory_orders_total_cost || 0)
   end
 
+  def total_cost_with_modifiers
+    total_cost + (frozen_modifiers_price || 0)
+  end
+
   def high_value?
     frozen_item_price > HIGH_VALUE_THRESHOLD ||
       total_cost > HIGH_VALUE_THRESHOLD ||
-      total_cost_with_accessories > HIGH_VALUE_THRESHOLD
+      total_cost_with_accessories > HIGH_VALUE_THRESHOLD ||
+      total_cost_with_modifiers > HIGH_VALUE_THRESHOLD
   end
 
   def requires_additional_review?
@@ -345,6 +368,7 @@ class ShopOrder < ApplicationRecord
   end
 
   def check_user_balance
+    return if redeeming_mission_submission.present?
     return unless frozen_item_price&.positive? && quantity.present?
 
     total_cost_for_validation = frozen_item_price * quantity
@@ -352,6 +376,17 @@ class ShopOrder < ApplicationRecord
       shortage = total_cost_for_validation - (user.balance || 0)
       errors.add(:base, "Insufficient balance. You need #{shortage} more tickets.")
     end
+  end
+
+  def check_mission_unlock_requirement
+    return unless shop_item&.mission_locked_for?(user)
+    errors.add(:base, "This item is locked behind a mission you haven't completed yet.")
+  end
+
+  def check_mission_prize_requires_redemption
+    return unless shop_item&.mission_prize_only?
+    return if redeeming_mission_submission.present?
+    errors.add(:base, "This item can only be claimed by redeeming an approved mission submission.")
   end
 
   USPS_SUSPENDED_COUNTRIES = %w[
@@ -444,7 +479,7 @@ class ShopOrder < ApplicationRecord
     return unless frozen_item_price.present? && frozen_item_price > 0 && quantity.present?
 
     user.ledger_entries.create!(
-      amount: -total_cost,
+      amount: -total_cost_with_modifiers,
       reason: "Shop order of #{shop_item.name.pluralize(quantity)}",
       created_by: "System",
       ledgerable: self
@@ -456,7 +491,7 @@ class ShopOrder < ApplicationRecord
     return if shop_item.is_a?(ShopItem::FreeStickers)
 
     user.ledger_entries.create!(
-      amount: total_cost,
+      amount: total_cost_with_modifiers,
       reason: "Refund for rejected order of #{shop_item.name.pluralize(quantity)}",
       created_by: "System",
       ledgerable: self
@@ -519,7 +554,7 @@ class ShopOrder < ApplicationRecord
       user.slack_id,
       nil,
       blocks_path: "notifications/shop_orders/assigned",
-      locals: { order: self, admin_url: Rails.application.routes.url_helpers.admin_shop_order_url(self, host: "flavortown.hackclub.com", protocol: "https") }
+      locals: { order: self, admin_url: Rails.application.routes.url_helpers.admin_shop_order_url(self, host: "stardance.hackclub.com", protocol: "https") }
     )
   end
 end

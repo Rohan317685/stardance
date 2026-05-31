@@ -20,12 +20,6 @@ production:
     concurrency: 1
     description: "Sync user data to Airtable every minute with single execution limit"
 
-  sync_pre_signup_leads_to_airtable:
-    class: Airtable::PreSignupLeadSyncJob
-    schedule: every hour
-    concurrency: 1
-    description: "Full sync of pre-signup leads to Airtable"
-
   sync_rsvp_to_airtable:
     class: Airtable::RsvpSyncJob
     schedule: every minute
@@ -67,13 +61,6 @@ production:
     schedule: every Sunday at 3am
     concurrency: 1
     description: "Weekly refresh of verification status for all users with linked identities"
-
-  cache_carousel_prizes:
-    class: Cache::CarouselPrizesJob
-    args: [{ force: true }]
-    schedule: every hour
-    concurrency: 1
-    description: "Refresh carousel prizes cache for landing page"
 
   cache_sitemap:
     class: Cache::SitemapJob
@@ -124,38 +111,26 @@ production:
     concurrency: 1
     description: "Send daily shop order summary to Slack with backlog, assignments, and hang times"
 
-  ysws_review_sync:
-    class: YswsReviewSyncJob
-    schedule: every day at 9am America/New_York
-    concurrency: 1
-    description: "Sync completed YSWS reviews to Airtable with user PII"
-
   shop_calculate_fulfillment_payouts:
     class: Shop::CalculateFulfillmentPayoutsJob
     schedule: every Friday at 12pm Europe/London
     concurrency: 1
     description: "Calculate weekly fulfillment payouts (3 tickets per fulfilled order)"
 
-  ysws_check_duplicates:
-    class: YswsReview::CheckDuplicatesJob
-    schedule: every day
-    concurrency: 1
-    description: "Check YSWS submissions for duplicates in unified database"
-  
   support_vibecheck_est:
     class: SupportVibecheckJob
     schedule: every day at 12pm America/New_York
     concurrency: 1
     description: "Run support vibecheck at 12pm EST"
 
-  pull_user_club_data:
-    class: Airtable::UserClubPullJob
-    schedule: every day at 3am America/New_York
-    concurrency: 1
-    description: "Pull Airtable record IDs and club names from Airtable to local DB (daily off-peak sync)"
-
   refresh_user_verdicts:
     class: User::RefreshVerdictsJob
     schedule: every 12 hours
     concurrency: 1
     description: "Recompute vote quality scores and update blessed/cursed/neutral verdicts for all voters"
+
+  cleanup_guest_users:
+    class: CleanupGuestUsersJob
+    schedule: every day at 4am America/New_York
+    concurrency: 1
+    description: "Hard-delete guest users (no HCA identity) older than 30 days"

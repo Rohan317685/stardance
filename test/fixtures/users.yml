@@ -16,6 +16,7 @@
 #  experience_level             :string
 #  first_name                   :string
 #  granted_roles                :string           default([]), not null, is an Array
+#  guest_email                  :string
 #  has_gotten_free_stickers     :boolean          default(FALSE)
 #  has_pending_achievements     :boolean          default(FALSE), not null
 #  hcb_email                    :string
@@ -29,13 +30,15 @@
 #  regions                      :string           default([]), is an Array
 #  session_token                :string
 #  shop_region                  :enum
+#  shop_tutorial_completed_at   :datetime
+#  shop_tutorial_started_at     :datetime
 #  synced_at                    :datetime
 #  things_dismissed             :string           default([]), not null, is an Array
-#  tutorial_steps_completed     :string           default([]), is an Array
+#  user_ref                     :string
+#  verification_checked_at      :datetime
 #  verification_status          :string           default("needs_submission"), not null
 #  vote_balance                 :integer          default(0), not null
 #  votes_count                  :integer
-#  voting_locked                :boolean          default(FALSE), not null
 #  ysws_eligible                :boolean          default(FALSE), not null
 #  created_at                   :datetime         not null
 #  updated_at                   :datetime         not null
@@ -43,22 +46,28 @@
 #
 # Indexes
 #
-#  index_users_on_email               (email)
-#  index_users_on_lower_email_unique  (lower((email)::text)) UNIQUE WHERE ((email IS NOT NULL) AND ((email)::text <> ''::text))
-#  index_users_on_onboarded_at        (onboarded_at)
-#  index_users_on_session_token       (session_token) UNIQUE
-#  index_users_on_slack_id            (slack_id) UNIQUE
+#  index_users_on_email                      (email)
+#  index_users_on_guest_email                (guest_email)
+#  index_users_on_lower_display_name_unique  (lower((display_name)::text)) UNIQUE WHERE ((display_name IS NOT NULL) AND ((display_name)::text <> ''::text))
+#  index_users_on_lower_email_unique         (lower((email)::text)) UNIQUE WHERE ((email IS NOT NULL) AND ((email)::text <> ''::text))
+#  index_users_on_onboarded_at               (onboarded_at)
+#  index_users_on_session_token              (session_token) UNIQUE
+#  index_users_on_slack_id                   (slack_id) UNIQUE
 #
 one:
   email: one@example.test
-  display_name: MyString
+  display_name: fixture_one
   slack_id: U_FIXTURE_ONE
-  projects_count: 1
   votes_count: 1
 
 two:
   email: two@example.test
-  display_name: MyString
+  display_name: fixture_two
   slack_id: U_FIXTURE_TWO
-  projects_count: 1
   votes_count: 1
+
+three:
+  email: three@example.test
+  display_name: MyString
+  slack_id: U_FIXTURE_THREE
+  votes_count: 0

@@ -5,7 +5,6 @@
 #  id                                :bigint           not null, primary key
 #  accessory_tag                     :string
 #  agh_contents                      :jsonb
-#  attached_shop_item_ids            :bigint           default([]), is an Array
 #  blocked_countries                 :string           default([]), is an Array
 #  buyable_by_self                   :boolean          default(TRUE)
 #  default_assigned_user_id_au       :bigint
@@ -38,7 +37,6 @@
 #  max_qty                           :integer
 #  mission_prize_only                :boolean          default(FALSE), not null
 #  name                              :string
-#  old_prices                        :integer          default([]), is an Array
 #  one_per_person_ever               :boolean
 #  past_purchases                    :integer          default(0)
 #  payout_percentage                 :integer          default(0)
@@ -97,15 +95,65 @@ class ShopItem < ApplicationRecord
   before_validation :floor_ticket_cost
   before_validation :clean_requires_achievement
 
-  after_commit :refresh_carousel_cache, if: :carousel_relevant_change?
   after_commit :invalidate_shop_page_cache
+
+  GITHUB_STICKERS = %w[
+    Sti/Git/Inv/Dar
+  ].freeze
+
+  NASA_STICKERS = %w[
+    Sti/SD/Art/Sheet
+    Sti/SD/Art/diecut
+  ].freeze
+
+  HC_STICKERS = %w[
+    Sti/Bra/BMO/Ovr
+    Sti/Bra/CD-/Gra
+    Sti/Bra/Can/Let
+    Sti/Bra/Cap/Hck
+    Sti/Bra/Cas/Mix
+    Sti/Bra/Clo/1st
+    Sti/Bra/Con/Rod
+    Sti/Bra/Ene/Drk
+    Sti/Bra/Fla/Emb
+    Sti/Bra/Gan/Gan
+    Sti/Bra/HC-/CD-
+    Sti/Bra/Hei/Chi
+    Sti/Bra/Hei/Cof
+    Sti/Bra/Hei/Gmr
+    Sti/Bra/Hei/Lea
+    Sti/Bra/Hei/Pls
+    Sti/Bra/Hei/Spe
+    Sti/Bra/Hei/Trs
+    Sti/Bra/Hel/Nam
+    Sti/Bra/Ins/1st
+    Sti/Bra/Lic/Plt
+    Sti/Bra/O&H/Hug
+    Sti/Bra/O&H/Lap
+    Sti/Bra/Orp/Cos
+    Sti/Bra/Orp/Des
+    Sti/Bra/Orp/Plu
+    Sti/Bra/Pol/O&H
+    Sti/Bra/Pol/Se2
+    Sti/Bra/Ram/1st
+    Sti/Bra/Ray/1st
+    Sti/Bra/Sur/Sum
+    Sti/Bra/Tam/1st
+    Sti/Bra/The/1st
+    Sti/Bra/Und/Sta
+    Sti/Bra/Yak/Bot
+    Sti/Sti/Fla/Top
+    Sti/Sti/Hac/1st
+    Sti/Sti/Kaw/1st
+    Sti/Sti/Orp/Thu
+  ].freeze
 
   RECENTLY_ADDED_WINDOW = 2.weeks
   SHOP_PAGE_CACHE_KEY = "shop_items/shop_page"
 
   def self.cached_shop_page_data
     Rails.cache.fetch(SHOP_PAGE_CACHE_KEY, expires_in: 5.minutes) do
-      buyable = enabled.listed.buyable_standalone.includes(image_attachment: :blob).to_a
+      buyable = enabled.listed.buyable_standalone.where(mission_prize_only: false).includes(image_attachment: :blob).to_a
       item_ids = buyable.map(&:id)
 
       reserved_counts = ShopOrder
@@ -122,7 +170,7 @@ class ShopItem < ApplicationRecord
       end
 
       cutoff = RECENTLY_ADDED_WINDOW.ago
-      recently_added = buyable.select { |item| item.created_at >= cutoff }.sort_by(&:created_at).reverse
+      recently_added = buyable.select { |item| item.created_at >= cutoff && item.type != "ShopItem::FreeStickers" }.sort_by(&:created_at).reverse
 
       { buyable_standalone: buyable, recently_added: recently_added }
     end
@@ -198,6 +246,22 @@ class ShopItem < ApplicationRecord
 
   has_many :shop_orders, dependent: :restrict_with_error
 
+  has_many :mission_prizes,        class_name: "Mission::Prize",      dependent: :restrict_with_error
+  has_many :prize_missions,        through: :mission_prizes, source: :mission
+  has_many :mission_shop_unlocks,  class_name: "Mission::ShopUnlock", dependent: :destroy
+  has_many :unlocking_missions,    through: :mission_shop_unlocks, source: :mission
+
+  has_many :shop_item_attachments, foreign_key: :parent_item_id, dependent: :destroy
+  has_many :accessories, through: :shop_item_attachments, source: :accessory_item
+
+  has_many :shop_item_modifiers, dependent: :destroy
+  accepts_nested_attributes_for :shop_item_modifiers, allow_destroy: true,
+    reject_if: proc { |attrs| attrs["name"].blank? }
+  has_many :shop_item_categories, dependent: :destroy
+  has_many :shop_categories, through: :shop_item_categories
+  has_many :shop_item_sources, dependent: :destroy
+  has_many :shop_sources, through: :shop_item_sources
+
   def agh_contents=(value)
     if value.is_a?(String) && value.present?
       begin
@@ -260,25 +324,44 @@ class ShopItem < ApplicationRecord
     c > 2 ? c : (past_purchases.to_i > 2 ? past_purchases : nil)
   end
 
-  def new_item? = created_at.present? && created_at > 7.days.ago
+  def old_prices
+    versions.where(event: "update")
+      .map { |v| v.object_changes&.dig("ticket_cost")&.first }
+      .compact
+      .uniq
+  end
+
+  def new_item?
+    return false if is_a?(ShopItem::FreeStickers) || is_a?(ShopItem::TutorialNothing)
+
+    created_at.present? && created_at > 7.days.ago
+  end
 
   def expired?
     enabled_until.present? && enabled_until <= Time.current
   end
 
   def available_accessories
-    ShopItem::Accessory.where("? = ANY(attached_shop_item_ids)", id).enabled
+    accessories.where(type: "ShopItem::Accessory").enabled
   end
 
   def has_accessories?
     available_accessories.exists?
   end
 
+  def available_modifiers_for_region(region_code)
+    shop_item_modifiers.globally_enabled.ordered.select { |m| m.enabled_in_region?(region_code) }
+  end
+
+  def has_modifiers?
+    shop_item_modifiers.globally_enabled.exists?
+  end
+
   def meet_ship_require?(user)
     return true unless requires_ship?
     return false unless user.present?
 
-    user.shipped_projects_count_in_range(required_ships_start_date, required_ships_end_date) >= required_ships_count
+    user.projects.with_ship_events_between(required_ships_start_date, required_ships_end_date).count >= required_ships_count
   end
 
   def blocked_in_country?(country_code)
@@ -307,6 +390,16 @@ class ShopItem < ApplicationRecord
     requires_achievement.map { |slug| Achievement.find(slug) }
   end
 
+  # True iff this item is gated by mission_shop_unlocks AND the user has not
+  # completed any of the unlocking missions yet. Items with no shop_unlocks
+  # are never mission-locked; mission_prize_only items are unlocked by
+  # showing up via the redemption flow, not this gate.
+  def mission_locked_for?(user)
+    return false unless mission_shop_unlocks.exists?
+    return true unless user
+    (unlocking_missions.pluck(:id) & user.completed_mission_ids.to_a).empty?
+  end
+
   private
 
   def is_range_valid
@@ -319,10 +412,6 @@ class ShopItem < ApplicationRecord
 
   def carousel_relevant_change?
     show_in_carousel? || saved_change_to_show_in_carousel?
-  end
-
-  def refresh_carousel_cache
-    Cache::CarouselPrizesJob.perform_later(force: true)
   end
 
   def invalidate_shop_page_cache

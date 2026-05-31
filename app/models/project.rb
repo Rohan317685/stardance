@@ -34,6 +34,8 @@
 #
 #  fk_rails_...  (marked_fire_by_id => users.id)
 #
+require "net/http"
+
 class Project < ApplicationRecord
   include AASM
   include SoftDeletable
@@ -57,6 +59,15 @@ class Project < ApplicationRecord
     user ? where.not(id: user.projects) : all
   }
   scope :fire, -> { where.not(marked_fire_at: nil) }
+  scope :with_ship_events, -> { joins(:ship_events).distinct }
+  scope :with_ship_events_between, ->(start_date, end_date) {
+    joins(:posts)
+      .where(posts: {
+        postable_type: "Post::ShipEvent",
+        created_at: start_date.beginning_of_day..end_date.end_of_day
+      })
+      .distinct
+  }
   scope :with_banner_priority, -> {
     left_joins(:banner_attachment)
       .includes(banner_attachment: :blob)
@@ -75,9 +86,32 @@ class Project < ApplicationRecord
   has_many :git_commit_posts, -> { where(postable_type: "Post::GitCommit").order(created_at: :desc) }, class_name: "Post"
   has_many :votes, dependent: :destroy
   has_many :reports, class_name: "Project::Report", dependent: :destroy
+  has_many :ship_reviews, class_name: "Certification::Ship", dependent: :restrict_with_exception
   has_many :skips, class_name: "Project::Skip", dependent: :destroy
   has_many :project_follows, dependent: :destroy
   has_many :followers, through: :project_follows, source: :user
+
+  has_many :mission_attachments,      class_name: "Project::MissionAttachment",  dependent: :destroy, inverse_of: :project
+  has_many :missions,                 through:    :mission_attachments
+  has_many :mission_section_completions, class_name: "Mission::SectionCompletion",  dependent: :destroy
+  has_many :mission_submissions,         class_name: "Mission::Submission",         through: :ship_events
+
+  def current_mission_attachment
+    mission_attachments.where(detached_at: nil).order(attached_at: :desc).first
+  end
+
+  def current_mission
+    current_mission_attachment&.mission
+  end
+
+  # True once this project has shipped to the given mission at least once.
+  # After that first ship the mission stays attached (for display) but future
+  # ships are regular, non-mission ships.
+  def shipped_to_mission?(mission)
+    return false if mission.nil?
+    mission_submissions.where(mission_id: mission.id).exists?
+  end
+
   # needs to be implemented
   has_one_attached :demo_video
 
@@ -167,14 +201,6 @@ class Project < ApplicationRecord
     shipped_at.present? || !draft?
   end
 
-  def restore!
-    update!(deleted_at: nil)
-  end
-
-  def deleted?
-    deleted_at.present?
-  end
-
   def display_description
     description.to_s
   end
@@ -195,17 +221,27 @@ class Project < ApplicationRecord
     (total_seconds / 3600.0).round(1)
   end
 
+  def seconds_coded_in_devlog_window(hackatime_uid, at: Time.current)
+    HackatimeService.fetch_total_seconds_for_projects(
+      hackatime_uid,
+      hackatime_keys,
+      start_date: devlog_window_start(at).iso8601,
+      end_date: at.iso8601
+    )
+  end
+
   aasm column: :ship_status do
     state :draft, initial: true
     state :submitted
     state :under_review
+    state :needs_changes
     state :approved
     state :rejected
 
     event :submit_for_review do
-      transitions from: [ :draft, :submitted, :under_review, :approved, :rejected ], to: :submitted, guard: :shippable?
+      transitions from: [ :draft, :submitted, :under_review, :needs_changes, :approved, :rejected ], to: :submitted, guard: :shippable?
       after do
-        self.shipped_at = Time.current
+        self.shipped_at = Time.current # I moved this logic to the ships controller as there's differences in how we handle reships - @AVD
       end
     end
 
@@ -220,15 +256,41 @@ class Project < ApplicationRecord
     event :reject do
       transitions from: :under_review, to: :rejected
     end
+
+    event :return_for_changes do
+      transitions from: :under_review, to: :needs_changes
+    end
   end
 
+  # Maps each editable info field on the project form to the shipping
+  # requirement keys it satisfies. Mirrors FIELD_REQUIREMENT_MAP in the
+  # project-form Stimulus controller. The union of these keys is what
+  # distinguishes "project info" from gates like devlog / payout / vote balance.
+  FIELD_REQUIREMENT_MAP = {
+    description: %i[description],
+    demo_url: %i[demo_url demo_url_reachable],
+    repo_url: %i[repo_url repo_url_format repo_cloneable],
+    readme_url: %i[readme_url readme_url_reachable],
+    banner: %i[banner]
+  }.freeze
+
+  INFO_REQUIREMENT_KEYS = FIELD_REQUIREMENT_MAP.values.flatten.freeze
+
   def shipping_requirements
+    owner_vote_balance = memberships.owner.first&.user&.vote_balance.to_i
+    votes_needed = [ -owner_vote_balance, 0 ].max
     [
       {
         key: :demo_url,
         label: "Add a demo link so anyone can try your project",
         tooltip: "A live URL where anyone can try your project, e.g. a deployed web app or a video demo.",
         passed: demo_url.present?
+      },
+      {
+        key: :demo_url_reachable,
+        label: "Your demo link must be reachable (not returning a 404 or error)",
+        tooltip: "We checked your demo URL and it returned an error. Make sure it's publicly accessible.",
+        passed: demo_url.blank? || url_reachable?(demo_url)
       },
       {
         key: :repo_url,
@@ -255,6 +317,12 @@ class Project < ApplicationRecord
         passed: readme_url.present?
       },
       {
+        key: :readme_url_reachable,
+        label: "Your README URL must be reachable",
+        tooltip: "We checked your README URL and it returned an error. Make sure it's a valid, publicly accessible link.",
+        passed: readme_url.blank? || url_reachable?(readme_url)
+      },
+      {
         key: :description,
         label: "Add a description for your project",
         tooltip: "A short summary of what your project does and what makes it interesting.",
@@ -262,8 +330,8 @@ class Project < ApplicationRecord
       },
       {
         key: :banner,
-        label: "Upload a banner image for your project",
-        tooltip: "A banner image (JPEG, PNG, or WebP, max 10MB) that represents your project on the explore page.",
+        label: "Upload a screenshot of your project",
+        tooltip: "A screenshot (JPEG, PNG, or WebP, max 10MB) that represents your project on the explore page.",
         passed: banner.attached?
       },
       {
@@ -282,9 +350,30 @@ class Project < ApplicationRecord
       {
         key: :vote_balance,
         label: "Maintain a non-negative vote balance",
-        fail_label: "Your vote balance is negative! Vote on other projects before shipping this one.",
+        fail_label: "Vote at least #{votes_needed} #{'time'.pluralize(votes_needed)} before shipping!",
         tooltip: "Your vote balance has gone negative from downvotes. Earn it back by getting upvotes on your projects.",
-        passed: memberships.owner.first&.user&.vote_balance.to_i >= 0
+        passed: owner_vote_balance >= 0
+      },
+      {
+        key: :idv,
+        label: "Verify your identity",
+        fail_label: "Verify your identity before shipping",
+        tooltip: "Stardance needs to verify your identity through Hack Club Auth before you can ship — it keeps the program safe and is how we know where to send prizes.",
+        passed: memberships.owner.first&.user&.identity_verified?
+      },
+      {
+        key: :ysws_eligible,
+        label: "You're eligible for YSWS prizes",
+        fail_label: "You're not eligible for YSWS prizes yet — check the Hack Club portal",
+        tooltip: "Your identity is verified, but YSWS eligibility is still pending. Open the Hack Club portal for details.",
+        passed: memberships.owner.first&.user&.ysws_eligible?
+      },
+      {
+        key: :shop_tutorial,
+        label: "Pick stickers or nothing in the shop once",
+        fail_label: "Visit the shop and pick stickers (or nothing) to get started",
+        tooltip: "Before your first ship, go to the shop and pick either stickers or nothing. It shows you how the order flow works so a real order down the line doesn't catch you off guard.",
+        passed: memberships.owner.first&.user&.shop_tutorial_completed?
       },
       {
         key: :project_isnt_rejected,
@@ -312,9 +401,32 @@ class Project < ApplicationRecord
     shipping_requirements.select { |elem| !elem[:passed] || elem[:label] }
   end
 
-  def shippable? = shipping_requirements.all? { |r| r[:passed] }
+  def shippable? = ship_blocking_errors.empty?
 
   def ship_blocking_errors = shipping_requirements.reject { |r| r[:passed] }.map { |r| r[:label] }
+
+  # The single most relevant reason the project can't ship yet, as a short
+  # actionable message — used for the ship button's disabled tooltip. Returns
+  # nil when the project is shippable.
+  def ship_blocker_message
+    req = shipping_requirements.find { |r| !r[:passed] }
+    req && (req[:fail_label] || req[:label])
+  end
+
+  # Whether every project-info requirement (see INFO_REQUIREMENT_KEYS) passes,
+  # i.e. the editable details are filled in and ship-ready.
+  def info_complete?
+    shipping_requirements
+      .select { |r| INFO_REQUIREMENT_KEYS.include?(r[:key]) }
+      .all? { |r| r[:passed] }
+  end
+
+  # The editable info fields (see FIELD_REQUIREMENT_MAP) that still have an
+  # unmet requirement — used to highlight what's left to fill in on the form.
+  def incomplete_info_fields
+    unmet = shipping_requirements.reject { |r| r[:passed] }.map { |r| r[:key] }
+    FIELD_REQUIREMENT_MAP.select { |_field, keys| (keys & unmet).any? }.keys
+  end
 
   def last_ship_event
     ship_events.first
@@ -348,14 +460,6 @@ class Project < ApplicationRecord
     marked_fire_at.present?
   end
 
-  def mark_fire!(user)
-    update!(marked_fire_at: Time.current, marked_fire_by: user)
-  end
-
-  def unmark_fire!
-    update!(marked_fire_at: nil, marked_fire_by: nil)
-  end
-
   def readme_is_raw_github_url?
     return false if readme_url.blank?
 
@@ -370,11 +474,43 @@ class Project < ApplicationRecord
     /https:\/\/raw\.githubusercontent\.com\/[^\/]+\/[^\/]+\/[^\/]+\/.*README.*\.md/i.match?(uri.to_s)
   end
 
+  def has_devlog_since_last_ship?
+    scope = devlog_posts
+    scope = scope.where("posts.created_at > ?", last_ship_event.created_at) if last_ship_event
+    scope.exists?
+  end
+
+  # The recommended next action for this project is to post a devlog when the
+  # user either hasn't posted anything yet or their most recent post was a
+  # ship (i.e. progress is needed before the next ship).
+  def next_step_is_devlog?
+    last_devlog_at = devlog_posts.maximum(:created_at)
+    return true if last_devlog_at.nil?
+
+    last_ship_at = ship_event_posts.maximum(:created_at)
+    last_ship_at.present? && last_ship_at > last_devlog_at
+  end
+
+  # Public so ProjectUrlProbeService can probe demo/repo URLs on re-ship. The
+  # HTTP helpers it leans on stay private below.
+  def url_reachable?(url)
+    cache_key = "url_reachable_#{Digest::MD5.hexdigest(url)}"
+    Rails.cache.fetch(cache_key, expires_in: 5.minutes) do
+      next false unless SafeUrl.safe_to_probe?(url)
+      uri = URI.parse(url)
+      response = head_with_redirects(uri)
+      response.is_a?(Net::HTTPSuccess) || response.is_a?(Net::HTTPRedirection)
+    end
+  rescue URI::InvalidURIError, SocketError, Errno::ECONNREFUSED, Errno::EHOSTUNREACH,
+         Net::OpenTimeout, Net::ReadTimeout, OpenSSL::SSL::SSLError
+    false
+  end
+
   private
 
-  def has_devlog_since_last_ship?
-    return true if last_ship_event.nil?
-    devlog_posts.where("posts.created_at > ?", last_ship_event.created_at).exists?
+  def devlog_window_start(at)
+    previous_devlog = devlogs.where("post_devlogs.created_at < ?", at).order("post_devlogs.created_at desc").first
+    previous_devlog&.created_at || [ created_at, Date.parse(HackatimeService::START_DATE).beginning_of_day ].min
   end
 
   def previous_ship_event_has_payout?
@@ -384,5 +520,25 @@ class Project < ApplicationRecord
 
   def notify_slack_channel
     PostCreationToSlackJob.perform_later(self)
+  end
+
+  def head_with_redirects(uri, limit = 3)
+    if limit <= 0
+      Net::HTTPServiceUnavailable.new("1.1", "503", "Too many redirects")
+    else
+      http = Net::HTTP.new(uri.host, uri.port)
+      http.use_ssl = (uri.scheme == "https")
+      http.open_timeout = 10
+      http.read_timeout = 10
+      response = http.request_head(uri.request_uri)
+
+      if response.is_a?(Net::HTTPRedirection) && response["location"]
+        next_uri = URI.parse(response["location"])
+        return Net::HTTPForbidden.new("1.1", "403", "Redirect target not safe") unless SafeUrl.safe_to_probe?(next_uri.to_s)
+        head_with_redirects(next_uri, limit - 1)
+      else
+        response
+      end
+    end
   end
 end

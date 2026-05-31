@@ -1,0 +1,316 @@
+// First-project setup wizard. Shares the `.onboarding-screen` shell (see
+// pages/_onboarding.scss) for layout, background, and entry/exit animations.
+// Everything here is the project-flow-specific bits.
+
+.project-setup-screen {
+  .onboarding-screen__title em {
+    font-family: "Playfair Display", serif;
+    font-style: italic;
+  }
+}
+
+// Idea step — two big choice cards, same shape as the birthday step.
+.project-setup-idea {
+  &__form {
+    width: 100%;
+  }
+
+  &__cards {
+    display: grid;
+    gap: 2rem;
+    grid-template-columns: repeat(2, minmax(0, 400px));
+    justify-content: center;
+    margin-top: 3rem;
+
+    .onboarding-choice-card {
+      aspect-ratio: 1;
+      min-height: 280px;
+    }
+
+    @media (max-width: 768px) {
+      grid-template-columns: 1fr;
+
+      .onboarding-choice-card {
+        aspect-ratio: auto;
+        min-height: 120px;
+      }
+    }
+  }
+}
+
+// Name step — title + description fields stacked.
+.project-setup-name {
+  &__form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.2rem;
+    margin: 2rem auto 0;
+    max-width: 560px;
+  }
+
+  &__input,
+  &__textarea {
+    background: rgba(8, 6, 31, 0.75);
+    border: 2px solid white;
+    border-radius: 0.5rem;
+    color: white;
+    font-family: "Exo 2", sans-serif;
+    padding: 0.8rem 1.2rem;
+    width: 100%;
+
+    &::placeholder {
+      color: rgba(255, 255, 255, 0.5);
+    }
+  }
+
+  &__input {
+    font-size: 1.6rem;
+    font-weight: 700;
+  }
+
+  &__textarea {
+    font-size: 1.05rem;
+    line-height: 1.4;
+    resize: vertical;
+  }
+
+  &__submit {
+    margin-top: 0.75rem;
+  }
+}
+
+// Missions step — grid of mission cards + escape hatch.
+.project-setup-missions {
+  &__grid {
+    display: grid;
+    gap: 1.25rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin: 2rem 0 1.5rem;
+    text-align: left;
+
+    @media (max-width: 768px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  &__card-form {
+    display: contents;
+  }
+
+  &__card {
+    align-items: stretch;
+    background: var(--color-set-2-bg);
+    border: 1px solid var(--color-space-border);
+    border-radius: var(--profile-radius);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    color: white;
+    cursor: pointer;
+    display: flex;
+    font-family: var(--font-family-text);
+    gap: 1rem;
+    padding: 1rem 1.1rem;
+    text-align: left;
+    transition:
+      border-color 180ms ease,
+      box-shadow 180ms ease,
+      transform 180ms ease;
+    width: 100%;
+
+    &:hover,
+    &:focus-visible {
+      border-color: var(--color-brand-lilac);
+      box-shadow:
+        0 4px 16px rgba(0, 0, 0, 0.3),
+        0 0 0 1px var(--color-brand-lilac-soft);
+      transform: translateY(-3px);
+    }
+  }
+
+  &__card-media {
+    align-items: center;
+    display: flex;
+    flex-shrink: 0;
+    height: 64px;
+    justify-content: center;
+    width: 64px;
+  }
+
+  &__card-icon {
+    height: 100%;
+    object-fit: contain;
+    width: 100%;
+  }
+
+  &__card-placeholder {
+    color: var(--color-brand-yellow);
+    font-size: 2rem;
+  }
+
+  &__card-body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+
+  &__card-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+  }
+
+  &__card-description {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.9rem;
+    line-height: 1.35;
+  }
+
+  &__card-meta {
+    align-self: flex-start;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: var(--space-xxs);
+  }
+
+  &__card-difficulty {
+    background: var(--color-brand-lilac-soft);
+    border-radius: 999px;
+    color: var(--color-brand-lilac);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    padding: 0.15rem 0.55rem;
+    text-transform: uppercase;
+  }
+
+  &__card-steps {
+    background: var(--color-space-surface-faint);
+    border-radius: 999px;
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.15rem 0.55rem;
+  }
+
+  &__card-duration {
+    background: var(--color-brand-mint-soft);
+    border-radius: 999px;
+    color: var(--color-brand-mint);
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.15rem 0.55rem;
+  }
+
+  &__card-prize {
+    background: var(--color-brand-yellow-soft);
+    border-radius: 999px;
+    color: var(--color-brand-yellow);
+    font-size: 0.7rem;
+    font-weight: 700;
+    margin-top: var(--space-xxs);
+    padding: 0.15rem 0.55rem;
+    align-self: flex-start;
+  }
+
+  &__empty {
+    align-items: center;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-m);
+    margin: 3rem 0;
+    text-align: center;
+  }
+
+  &__empty-icon {
+    color: var(--color-brand-lilac);
+    font-size: 2.5rem;
+  }
+
+  &__empty-text {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 1.05rem;
+    line-height: 1.5;
+    margin: 0;
+    max-width: 360px;
+  }
+
+  &__later-form {
+    display: inline-block;
+    margin-top: 0.5rem;
+  }
+
+  &__later {
+    background: transparent;
+    border: none;
+    color: white;
+    cursor: pointer;
+    font-family: var(--font-family-text);
+    font-size: 1rem;
+    font-weight: 700;
+    padding: 0.5rem 0.75rem;
+    text-decoration: underline;
+
+    &:hover,
+    &:focus-visible {
+      color: var(--color-brand-mint);
+    }
+  }
+}
+
+// Link-account gate — the "finish setting up your account" screen.
+.project-setup-link {
+  &__body {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin: 1.5rem auto 0;
+    max-width: 640px;
+
+    .onboarding-screen__subhead {
+      margin: 0;
+    }
+  }
+
+  &__form {
+    margin: 0;
+  }
+
+  &__cta {
+    margin-top: 2rem;
+  }
+
+  &__footer {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 2rem;
+    text-align: center;
+  }
+
+  &__footer-line {
+    color: var(--color-space-text);
+    font-size: var(--font-size-m);
+    margin: 0;
+    opacity: 0.85;
+  }
+
+  &__footer-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    justify-content: center;
+    margin: 0;
+  }
+
+  &__footer-link {
+    color: var(--color-space-text);
+    font-size: var(--font-size-m);
+    text-decoration: underline;
+
+    &:hover,
+    &:focus-visible {
+      color: var(--color-brand-highlight);
+    }
+  }
+}

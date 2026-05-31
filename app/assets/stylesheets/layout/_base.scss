@@ -1,5 +1,3 @@
-// Base Layout Styles
-
 * {
   margin: 0;
   padding: 0;
@@ -8,6 +6,10 @@
 }
 
 body {
+  --sidebar-width: 246px;
+  --sidebar-inset: 16px;
+  --sidebar-reserved: calc(var(--sidebar-width) + var(--sidebar-inset));
+
   margin: 0;
   color: var(--color-text-body);
   background-color: var(--color-bg);
@@ -24,12 +26,13 @@ main {
 body.signed-in {
   background-color: var(--color-space-bg);
   color: var(--color-space-text);
-  margin-left: 380px; // space for sidebar
-  margin-right: 100px;
+  margin-left: var(--sidebar-reserved);
+  margin-right: 88px;
 
   @media (max-width: 1500px) {
-    margin-left: 280px;
-    margin-right: 50px;
+    --sidebar-width: 194px;
+    --sidebar-inset: 12px;
+    margin-right: 29px;
   }
 
   @media (max-width: 960px) {
@@ -39,10 +42,74 @@ body.signed-in {
   }
 }
 
-// Shop page keeps the same backdrop even when logged out.
-body.shop-page:not(.signed-in) {
+// Shop and guides pages keep the dark space backdrop even when logged out.
+body.shop-page:not(.signed-in),
+body.guides-page:not(.signed-in) {
   background-color: var(--color-space-bg);
   color: var(--color-space-text);
+}
+
+body.shop-page.signed-in {
+  margin-right: 0;
+}
+
+// Three-column layout: sidebar, app, and rail
+body.app-layout-page.signed-in {
+  margin-left: 0;
+  margin-right: 0;
+
+  @media (max-width: 960px) {
+    margin-left: var(--space-m);
+    margin-right: var(--space-m);
+    margin-bottom: 180px; // safe area for the bottom-bar sidebar
+  }
+}
+
+.app-layout {
+  --layout-gap: 29px;
+  --nav-reserved: calc(var(--sidebar-reserved) + var(--layout-gap));
+  --aside-reserved: 282px;
+
+  margin-left: var(--nav-reserved);
+  margin-right: calc(var(--aside-reserved) + var(--layout-gap));
+  padding: 29px 0 var(--space-xl);
+
+  @media (max-width: 1500px) {
+    --layout-gap: 22px;
+  }
+
+  @media (max-width: 1280px) {
+    --aside-reserved: 0px; // rail hidden at this breakpoint
+    margin-right: var(--layout-gap);
+  }
+
+  @media (max-width: 960px) {
+    --nav-reserved: 0px; // sidebar moves to bottom bar at this breakpoint
+    margin-left: 0;
+    margin-right: 0;
+    max-width: 100%;
+    padding-top: var(--space-m);
+  }
+}
+
+.app-layout__main {
+  max-width: 722px;
+  margin: 0 auto;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+// Full-width variant — drops the reading-column cap; for rail-less pages.
+.app-layout--wide {
+  @media (min-width: 1281px) {
+    margin-right: var(--layout-gap);
+  }
+}
+
+.app-layout__main--wide {
+  max-width: none;
 }
 
 .dev-footer {
@@ -51,8 +118,6 @@ body.shop-page:not(.signed-in) {
   color: #6b7280;
   opacity: 0.1;
   transition: opacity 0.2s ease;
-  // Pushes the footer to the bottom of the viewport when page content is
-  // shorter than the screen (relies on body being a flex column).
   margin-top: auto;
   padding: 0.625rem;
 

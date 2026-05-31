@@ -1,13 +1,12 @@
 name: Build & Deploy
-
 on:
   push:
-    branches: [main]
+    branches: [main, platform]
   workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }} # hackclub/stardance
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   build-and-push:
@@ -15,19 +14,17 @@ jobs:
     permissions:
       contents: read
       packages: write
-
     outputs:
       image: ${{ steps.meta.outputs.tags }}
-
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Log in to GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -35,11 +32,12 @@ jobs:
 
       - name: Extract metadata (tags, labels)
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=platform,enable=${{ github.ref == 'refs/heads/platform' }}
             type=sha,prefix=sha-,format=short
 
       - name: Build and push
@@ -50,14 +48,23 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:cache
-          cache-to:   type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:cache,mode=max
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:cache,mode=max
 
   deploy:
-    needs: build-and-push
-    runs-on: ubuntu-latest
-    steps:
-      - name: Trigger Coolify redeploy
-        run: |
-          curl -s -o /dev/null -w "%{http_code}" \
-            -X GET "${{ secrets.COOLIFY_WEBHOOK }}" \
-            -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}"
+      needs: build-and-push
+      runs-on: ubuntu-latest
+      steps:
+        - name: Trigger Coolify redeploy
+          env:
+            WEBHOOK_MAIN: ${{ secrets.COOLIFY_WEBHOOK }}
+            WEBHOOK_PLATFORM: ${{ secrets.COOLIFY_WEBHOOK_PLATFORM }}
+            COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+          run: |
+            if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+              WEBHOOK="$WEBHOOK_MAIN"
+            else
+              WEBHOOK="$WEBHOOK_PLATFORM"
+            fi
+            curl -s -o /dev/null -w "%{http_code}" \
+              -X GET "$WEBHOOK" \
+              -H "Authorization: Bearer $COOLIFY_TOKEN"

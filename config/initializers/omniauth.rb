@@ -1,3 +1,15 @@
+# Strip query strings from the OAuth2 callback URL. OmniAuth's default
+# `callback_url` is `full_host + callback_path + query_string`, which means any
+# query param on the auth request (e.g. `?login_hint=…`) gets concatenated into
+# the redirect_uri sent to the provider — making it diverge from the URI
+# registered on the OAuth app. That mismatch surfaces as `invalid_grant` at
+# token exchange.
+OmniAuth::Strategies::OAuth2.class_eval do
+  def callback_url
+    full_host + callback_path
+  end
+end
+
 Rails.application.config.middleware.use OmniAuth::Builder do
     # Hack Club Account via generic OAuth2
     provider :oauth2,
@@ -5,7 +17,13 @@ Rails.application.config.middleware.use OmniAuth::Builder do
       Rails.application.credentials.dig(:idv, :client_secret),
       {
         name: :hack_club,
-        scope: "email name slack_id verification_status address basic_info",
+        # `address` and `phone` are required for the `/api/v1/me` payload to
+        # include `addresses` (and phone numbers), which the shop reads via
+        # `User#addresses`. Without them HCA refuses to return the data even
+        # after the user adds it via `/portal/address`. They were dropped in
+        # 5/8/2026 (commit b085984e) by accident; restore so the shop
+        # tutorial + order flow works.
+        scope: "openid email name profile verification_status slack_id address basic_info",
         callback_path: "/oauth/callback",
         client_options: {
           site:         HCAService.host,

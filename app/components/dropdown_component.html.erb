@@ -1,21 +1,16 @@
-<div class="<%= dropdown_classes %>" data-controller="dropdown">
-<div class="dropdown__spacer">
-    <%= longest_option_string %>
-  </div>
-  <div class="dropdown__label"><%= label %></div>
-  <button class="dropdown__button" data-action="click->dropdown#toggle" data-dropdown-target="button">
-    <span class="dropdown__selected" data-dropdown-target="selected">
-      <span class="dropdown__char-span"><%= selected_option %></span>
-    </span>
-    <%= helpers.inline_svg_tag "icons/chevron-down.svg", class: "dropdown__icon" %>
-  </button>
-  <ul class="dropdown__menu" data-dropdown-target="menu">
+<div class="dropdown dropdown--<%= color %>">
+  <% if label.present? %>
+    <label class="dropdown__label"><%= label %></label>
+  <% end %>
+  <select class="dropdown__select"
+          data-filter-type="<%= label %>"
+          <% if action %> data-action="<%= action %>"<% end %>>
     <% options.each do |option| %>
       <% if option.is_a?(Hash) %>
-        <li class="dropdown__item" data-action="click->dropdown#select" data-value="<%= option[:value] %>"><%= option[:label] %></li>
+        <option value="<%= option[:value] %>" <%= "selected" if option[:value].to_s == selected_value.to_s %>><%= option[:label] %></option>
       <% else %>
-        <li class="dropdown__item" data-action="click->dropdown#select" data-value="<%= option %>"><%= option %></li>
+        <option value="<%= option %>" <%= "selected" if option.to_s == selected_value.to_s %>><%= option %></option>
       <% end %>
     <% end %>
-  </ul>
+  </select>
 </div>

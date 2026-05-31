@@ -1,0 +1,93 @@
+<%# Cream-tinted ship-event card. Reused for every ShipEvent post on the
+    project page, home feed, and profile feed. Pass `ship_number: n` for a
+    sequential label (e.g. "Ship #2"); omit for a generic "Ship" label. %>
+<%
+  ship        = post.postable
+  author      = post.user
+  ship_text   = ship.body.to_s
+  total_hours = (project.duration_seconds / 3600.0).round
+  ship_number      = local_assigns[:ship_number]
+  pending_review   = ship.certification_status == "pending"
+%>
+
+<article class="feed-post-card project-show__latest-ship">
+  <div class="feed-post-card__reposted-by project-show__latest-ship-label">
+    <%= inline_svg_tag "icons/sticker.svg", class: "project-show__latest-ship-icon" %>
+    <span><%= ship_number ? "Ship ##{ship_number}" : "Ship" %></span>
+    <% if pending_review %>
+      <span class="project-show__latest-ship-status project-show__latest-ship-status--pending">Pending review</span>
+    <% end %>
+  </div>
+
+  <header class="feed-post-card__header">
+    <% if author %>
+      <%= link_to profile_path(author.display_name), class: "feed-post-card__avatar-link", aria: { label: "@#{author.display_name}" } do %>
+        <%= image_tag author.avatar, alt: "", class: "feed-post-card__avatar" %>
+      <% end %>
+    <% end %>
+
+    <div class="feed-post-card__meta">
+      <p class="feed-post-card__byline">
+        <% if author %>
+          <%= link_to "@#{author.display_name}",
+                      profile_path(author.display_name),
+                      class: "feed-post-card__author",
+                      data: { turbo_frame: "_top", turbo_prefetch: "true" } %>
+        <% end %>
+        <span class="feed-post-card__context">on</span>
+        <%= link_to project.title, project_path(project), class: "feed-post-card__project", data: { turbo_frame: "_top" } %>
+        <time class="feed-post-card__time" datetime="<%= post.created_at.iso8601 %>" title="<%= l(post.created_at, format: :long) %>">
+          · <%= time_ago_in_words(post.created_at) %>
+        </time>
+      </p>
+
+      <% if ship_text.present? %>
+        <div class="feed-post-card__body feed-post-card__body--inline project-show__latest-ship-text">
+          <%= simple_format(ship_text, {}, sanitize: true) %>
+        </div>
+      <% end %>
+    </div>
+  </header>
+
+  <ul class="feed-post-card__body project-show__latest-ship-stats" aria-label="Project totals">
+    <li class="profile-project-card__meta-item">
+      <%= inline_svg_tag "icons/devlogs.svg", class: "profile-project-card__meta-icon" %>
+      <span><%= pluralize(project.devlogs_count, "devlog") %></span>
+    </li>
+    <li class="profile-project-card__meta-item profile-project-card__meta-item--time">
+      <%= inline_svg_tag "icons/time.svg", class: "profile-project-card__meta-icon profile-project-card__meta-icon--time" %>
+      <span><%= total_hours %>h</span>
+    </li>
+    <% mission = ship.mission_submission&.mission %>
+    <% if mission %>
+      <li class="profile-project-card__meta-item profile-project-card__meta-item--mission">
+        <%= inline_svg_tag "icons/flag.svg", class: "profile-project-card__meta-icon profile-project-card__meta-icon--mission" %>
+        <span>
+          <%= link_to mission.name,
+                      mission_path(mission.slug),
+                      class: "project-show__latest-ship-mission-link",
+                      data: { turbo_frame: "_top" } %>
+        </span>
+      </li>
+    <% end %>
+  </ul>
+
+  <% if project.demo_url.present? || project.repo_url.present? %>
+    <div class="feed-post-card__body project-show__latest-ship-cta">
+      <% if project.demo_url.present? %>
+        <%= link_to "Try project →",
+                    project.demo_url,
+                    target: "_blank",
+                    rel: "noopener",
+                    class: "project-show__latest-ship-btn project-show__latest-ship-btn--primary" %>
+      <% end %>
+      <% if project.repo_url.present? %>
+        <%= link_to "See source code →",
+                    project.repo_url,
+                    target: "_blank",
+                    rel: "noopener",
+                    class: "project-show__latest-ship-btn" %>
+      <% end %>
+    </div>
+  <% end %>
+</article>
