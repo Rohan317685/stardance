@@ -239,7 +239,7 @@ class ProjectsController < ApplicationController
 
   def edit
     authorize @project
-    load_project_times
+    redirect_to project_path(@project, editing: true)
   end
 
   def update
@@ -507,7 +507,11 @@ class ProjectsController < ApplicationController
   def link_hackatime_projects
     # Unlink hackatime projects that were removed
     @project.hackatime_projects.where.not(id: hackatime_project_ids).find_each do |hp|
-      hp.update(project: nil)
+      unless hp.update(project: nil)
+        hp.errors.full_messages.each do |message|
+          @project.errors.add(:base, "Hackatime project #{hp.name}: #{message}")
+        end
+      end
     end
 
     return if hackatime_project_ids.empty?
@@ -519,11 +523,6 @@ class ProjectsController < ApplicationController
         end
       end
     end
-  end
-
-  def load_project_times
-    result = current_user.try_sync_hackatime_data!
-    @project_times = result&.dig(:projects) || {}
   end
 
   def test_time_session_key
