@@ -77,7 +77,7 @@
                       aria-live="polite"></span>
               </div>
             <% end %>
-            <p class="profile__joined">Joined <%= @user.created_at.to_date.strftime("%-d %b %Y") %></p>
+            <p class="profile__joined">Joined <%= "#{@user.created_at.strftime("%B")} #{@user.created_at.day.ordinalize}, #{@user.created_at.year}" %></p>
           </div>
         </div>
 
