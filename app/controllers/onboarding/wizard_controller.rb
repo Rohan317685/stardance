@@ -28,6 +28,10 @@ class Onboarding::WizardController < ApplicationController
     existing = User.find_by(email: normalized)
 
     if existing&.hca_linked?
+      if existing.age_blocked?
+        redirect_to onboarding_age_gate_path and return
+      end
+
       if existing.onboarded_at.nil?
         session[:user_id] = existing.id
         redirect_to onboarding_resume_path(existing) and return
@@ -60,26 +64,36 @@ class Onboarding::WizardController < ApplicationController
       redirect_to onboarding_guest_email_path and return
     end
 
+    user = create_guest!(normalized)
+    session[:user_id] = user.id
+    UserMailer.onboarding_start(user).deliver_later
+    track_event "onboarding_started", { user_id: user.id }
+
     if HCAService.email_known?(normalized)
       @login_hint = normalized
       return render :redirecting_to_hca
     end
 
-    user = create_guest!(normalized)
-    session[:user_id] = user.id
-    UserMailer.onboarding_start(user).deliver_later
     redirect_to onboarding_welcome_path
   end
 
   def welcome; end
 
   def birthday
-    if current_user.age_attestation.present?
+    if current_user.age_blocked?
+      reset_session
+      redirect_to onboarding_age_gate_path
+    elsif current_user.age_attestation.present?
       redirect_to params[:back] ? onboarding_welcome_path : onboarding_resume_path(current_user)
     end
   end
 
   def submit_birthday
+    if current_user.age_blocked?
+      reset_session
+      redirect_to onboarding_age_gate_path and return
+    end
+
     if current_user.age_attestation.present?
       redirect_to onboarding_resume_path(current_user) and return
     end
@@ -87,6 +101,7 @@ class Onboarding::WizardController < ApplicationController
     case params[:attestation]
     when "teen_13_18"
       current_user.update!(age_attestation: "teen_13_18")
+      track_event "onboarding_age_attested", { attestation: "teen_13_18" }
       redirect_to onboarding_experience_path
     when "ineligible"
       current_user.destroy
@@ -108,6 +123,7 @@ class Onboarding::WizardController < ApplicationController
     end
 
     current_user.update!(experience_level: level)
+    track_event "onboarding_experience_selected", { level: level }
     redirect_to onboarding_experience_result_path
   end
 
@@ -126,6 +142,7 @@ class Onboarding::WizardController < ApplicationController
     submitted = Array(params[:interests])
     if submitted.include?(User::INTERESTS_UNKNOWN)
       current_user.update!(interests: [ User::INTERESTS_UNKNOWN ])
+      track_event "onboarding_interests_selected", { interests: [ User::INTERESTS_UNKNOWN ] }
       redirect_to onboarding_interests_result_path and return
     end
 
@@ -135,6 +152,7 @@ class Onboarding::WizardController < ApplicationController
     end
 
     current_user.update!(interests: selected)
+    track_event "onboarding_interests_selected", { interests: selected }
     redirect_to onboarding_interests_result_path
   end
 
@@ -144,10 +162,12 @@ class Onboarding::WizardController < ApplicationController
       @peer_count = User.where("interests && ARRAY[?]::varchar[]", @interests)
                         .where.not(id: current_user.id)
                         .count
-      @beginner_peer_count = User.where("interests && ARRAY[?]::varchar[]", @interests)
-                                 .where(experience_level: "none")
-                                 .where.not(id: current_user.id)
-                                 .count
+      if current_user.experience_level == "none"
+        @beginner_peer_count = User.where("interests && ARRAY[?]::varchar[]", @interests)
+                                   .where(experience_level: "none")
+                                   .where.not(id: current_user.id)
+                                   .count
+      end
       @featured_projects = Onboarding::FeaturedProjects.for_interests(@interests)
     end
   end
@@ -168,6 +188,7 @@ class Onboarding::WizardController < ApplicationController
     value = params[:user_ref].to_s.strip
     value = params[:user_ref_other].to_s.strip.first(100) if value == "Other"
     current_user.update(user_ref: value.presence)
+    track_event "onboarding_referral_submitted", { user_ref: value.presence }
     redirect_to onboarding_name_path
   end
 
@@ -187,6 +208,7 @@ class Onboarding::WizardController < ApplicationController
     end
 
     if current_user.update(display_name: display_name, onboarded_at: Time.current)
+      track_event "onboarding_completed", { display_name: display_name }
       redirect_to home_path(welcome: 1)
     else
       alert = if current_user.errors[:display_name].any? { |m| m =~ /taken/i }
@@ -260,7 +282,13 @@ class Onboarding::WizardController < ApplicationController
   def create_guest!(email)
     ref = signup_referral_code
     5.times do
-      user = User.new(email: email, display_name: User.placeholder_display_name_from_email(email), ref: ref)
+      user = User.new(
+        email: email,
+        display_name: User.placeholder_display_name_from_email(email),
+        ref: ref,
+        ip_address: client_ip_address,
+        user_agent: request.user_agent
+      )
       return user if user.save
       # Email collision means the user already exists — hand back the existing
       # record. For any other error (most likely a display_name collision in
@@ -280,6 +308,7 @@ class Onboarding::WizardController < ApplicationController
 
   def require_teen_attestation!
     return if current_user&.age_attestation_teen_13_18?
+    return if current_user&.manual_ysws_override == true
     redirect_to onboarding_birthday_path
   end
 

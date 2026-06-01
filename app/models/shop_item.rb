@@ -85,6 +85,8 @@
 #  fk_rails_...  (user_id => users.id)
 #
 class ShopItem < ApplicationRecord
+  def self.policy_class = ShopItemPolicy
+
   has_paper_trail
 
   include Shop::Regionalizable
@@ -253,6 +255,8 @@ class ShopItem < ApplicationRecord
 
   has_many :shop_item_attachments, foreign_key: :parent_item_id, dependent: :destroy
   has_many :accessories, through: :shop_item_attachments, source: :accessory_item
+
+  has_many :shop_wishlists, dependent: :destroy
 
   has_many :shop_item_modifiers, dependent: :destroy
   accepts_nested_attributes_for :shop_item_modifiers, allow_destroy: true,
