@@ -77,7 +77,8 @@
             <%= render "shop/items/item_card",
                   item: item,
                   region: @user_region,
-                  balance: @user_balance %>
+                  balance: @user_balance,
+                  wishlisted_item_ids: @wishlisted_item_ids %>
           <% end %>
         <% end %>
         <% if @shop_items.empty? %>

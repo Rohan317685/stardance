@@ -63,6 +63,7 @@
                     region: @user_region,
                     balance: @user_balance,
                     tutorial_item_ids: pick_ids,
+                    wishlisted_item_ids: @wishlisted_item_ids,
                     spotlight: false %>
             </li>
           <% end %>
@@ -158,7 +159,8 @@
                   <%= render "shop/items/item_card",
                         item: item,
                         region: @user_region,
-                        balance: @user_balance %>
+                        balance: @user_balance,
+                        wishlisted_item_ids: @wishlisted_item_ids %>
                 </li>
               <% end %>
             </ul>
@@ -191,7 +193,8 @@
                   <%= render "shop/items/item_card",
                         item: item,
                         region: @user_region,
-                        balance: @user_balance %>
+                        balance: @user_balance,
+                        wishlisted_item_ids: @wishlisted_item_ids %>
                 </li>
               <% end %>
             </ul>

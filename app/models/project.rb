@@ -41,6 +41,7 @@ class Project < ApplicationRecord
   include AASM
   include SoftDeletable
   include SemanticSearchIndexable
+  include Gorse::SyncableProject
 
   has_ferret_search :title, :description
   semantic_search_indexable type: "project"
@@ -422,6 +423,13 @@ class Project < ApplicationRecord
     shipping_requirements
       .select { |r| INFO_REQUIREMENT_KEYS.include?(r[:key]) }
       .all? { |r| r[:passed] }
+  end
+
+  def info_blocker_message
+    req = shipping_requirements
+      .select { |r| INFO_REQUIREMENT_KEYS.include?(r[:key]) }
+      .find { |r| !r[:passed] }
+    req&.dig(:label)
   end
 
   # The editable info fields (see FIELD_REQUIREMENT_MAP) that still have an

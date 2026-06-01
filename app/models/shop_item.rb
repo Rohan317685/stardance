@@ -256,6 +256,8 @@ class ShopItem < ApplicationRecord
   has_many :shop_item_attachments, foreign_key: :parent_item_id, dependent: :destroy
   has_many :accessories, through: :shop_item_attachments, source: :accessory_item
 
+  has_many :shop_wishlists, dependent: :destroy
+
   has_many :shop_item_modifiers, dependent: :destroy
   accepts_nested_attributes_for :shop_item_modifiers, allow_destroy: true,
     reject_if: proc { |attrs| attrs["name"].blank? }
