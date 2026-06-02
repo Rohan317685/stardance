@@ -65,7 +65,15 @@ class ApplicationController < ActionController::Base
     if session[:user_id]
       scope = User.where(id: session[:user_id])
       scope = scope.eager_load(*Array(preloads)) if preloads.present?
-      @current_user = scope.to_a.first
+      user = scope.to_a.first
+
+      if user && user.session_token.present? && !session[:impersonator_user_id] &&
+         !ActiveSupport::SecurityUtils.secure_compare(session[:session_token].to_s, user.session_token.to_s)
+        reset_session
+        return @current_user = nil
+      end
+
+      @current_user = user
     end
   end
   helper_method :current_user
@@ -91,6 +99,11 @@ class ApplicationController < ActionController::Base
   rescue_from Pundit::NotAuthorizedError, with: :user_not_authorized
 
   private
+
+  def sign_in_user(user)
+    session[:user_id] = user.id
+    session[:session_token] = user.session_token
+  end
 
   # https://stackoverflow.com/questions/70960161/ruby-on-rails-back-button-that-will-take-you-back-to-the-previous-page
   # improvised a bit. a linked list sorta..

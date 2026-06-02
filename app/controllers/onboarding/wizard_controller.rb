@@ -33,7 +33,7 @@ class Onboarding::WizardController < ApplicationController
       end
 
       if existing.onboarded_at.nil?
-        session[:user_id] = existing.id
+        sign_in_user(existing)
         redirect_to onboarding_resume_path(existing) and return
       end
 
@@ -44,7 +44,7 @@ class Onboarding::WizardController < ApplicationController
     end
 
     if existing
-      session[:user_id] = existing.id
+      sign_in_user(existing)
 
       if onboarding_in_progress?(existing)
         if onboarding_fresh?(existing)
@@ -65,7 +65,7 @@ class Onboarding::WizardController < ApplicationController
     end
 
     user = create_guest!(normalized)
-    session[:user_id] = user.id
+    sign_in_user(user)
     UserMailer.onboarding_start(user).deliver_later
     track_event "onboarding_started", { user_id: user.id }
 
@@ -254,7 +254,7 @@ class Onboarding::WizardController < ApplicationController
     owner&.update!(guest_email: nil)
 
     user = create_guest!(claimed_email)
-    session[:user_id] = user.id
+    sign_in_user(user)
     redirect_to onboarding_welcome_path
   end
 

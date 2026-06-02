@@ -26,6 +26,7 @@ module Sessions
       identity = User::Identity.find_or_initialize_by(provider: "hack_club", uid: fields[:uid])
       user = user_for(identity, fields)
       is_new_user = user.new_record?
+      first_hca_link = user.persisted? && identity.new_record?
       guest_collision = guest_collision?(user)
 
       identity = resolve_uid_change(identity, user, fields[:slack_id], fields[:uid])
@@ -47,7 +48,7 @@ module Sessions
 
       user.apply_hca_verification_payload!(identity_data)
 
-      success_result(user, is_new_user, guest_collision)
+      success_result(user, is_new_user, guest_collision, first_hca_link)
     end
 
     private
@@ -228,7 +229,9 @@ module Sessions
         )
       end
 
-      def success_result(user, is_new_user, guest_collision)
+      def success_result(user, is_new_user, guest_collision, first_hca_link)
+        user.rotate_session_token! if first_hca_link
+
         Result.new(
           status: :ok,
           user: user,
