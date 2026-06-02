@@ -83,9 +83,14 @@
       <!-- Ship Cert Video Section -->
       <section class="review-card video-card">
         <h3>Ship Cert Video</h3>
-        <div class="video-placeholder">
-          <div class="placeholder-text">Placeholder for ship cert video</div>
-        </div>
+        <% if @review.ship_cert&.verdict_video&.attached? %>
+          <video class="video-card__player" src="<%= url_for(@review.ship_cert.verdict_video) %>"
+                 controls playsinline style="width:100%;border-radius:var(--profile-radius)"></video>
+        <% else %>
+          <div class="video-placeholder">
+            <div class="placeholder-text">No review video recorded</div>
+          </div>
+        <% end %>
       </section>
 
       <!-- Time Stats Section -->
