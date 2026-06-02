@@ -99,9 +99,9 @@ class ApplicationController < ActionController::Base
 
   private
 
-  def sign_in_user(user)
+  def sign_in_user(user, auth_level: "guest")
     session[:user_id] = user.id
-    session[:auth_level] = user.hca_linked? ? "hca" : "guest"
+    session[:auth_level] = auth_level
   end
 
   # https://stackoverflow.com/questions/70960161/ruby-on-rails-back-button-that-will-take-you-back-to-the-previous-page

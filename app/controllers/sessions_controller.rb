@@ -19,7 +19,7 @@ class SessionsController < ApplicationController
     end
 
     reset_session if result.guest_collision
-    sign_in_user(result.user)
+    sign_in_user(result.user, auth_level: "hca")
 
     return_to = safe_return_to(session.delete(:return_to))
 
