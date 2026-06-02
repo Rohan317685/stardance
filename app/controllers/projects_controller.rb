@@ -515,8 +515,10 @@ class ProjectsController < ApplicationController
     @project.errors.add(attribute, "#{name} is not a valid URL")
   rescue SafeUrl::Error => e
     # Host failed SSRF verification (non-public IP, unresolvable, bad scheme).
+    # Keep the real reason in the logs; give the user a cheeky generic message
+    # so we don't confirm whether an internal host exists.
     Rails.logger.warn("URL validation rejected #{attribute}: #{e.message}")
-    @project.errors.add(attribute, "#{name} does not point to a valid public URL")
+    @project.errors.add(attribute, "nice try ding dong — #{name} has to be a real, public URL")
   rescue SocketError, Errno::ECONNREFUSED, Errno::EHOSTUNREACH, Net::OpenTimeout, Net::ReadTimeout, OpenSSL::SSL::SSLError => e
     Rails.logger.warn("URL validation failed for #{attribute}: #{e.class}: #{e.message}")
     @project.errors.add(attribute, "#{name} could not be reached. Please make sure the URL is valid and publicly accessible.")
