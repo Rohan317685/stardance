@@ -21,9 +21,14 @@ module Certification
     end
 
     def svg
-      return empty_svg  if @commits.empty?
-      return single_svg if @commits.one?
-      multi_svg
+      result = if @commits.empty?
+        empty_svg
+      elsif @commits.one?
+        single_svg
+      else
+        multi_svg
+      end
+      result.html_safe
     end
 
     private
@@ -40,7 +45,7 @@ module Certification
 
     def y_max
       @y_max ||= [
-        @commits.flat_map { |c| [c[:additions].to_i, c[:deletions].to_i] }.max || 0,
+        @commits.flat_map { |c| [ c[:additions].to_i, c[:deletions].to_i ] }.max || 0,
         1
       ].max
     end
@@ -125,7 +130,7 @@ module Certification
       buf << %(<g transform="translate(#{ML},#{MT})">)
 
       # Y-axis ticks at 0%, 33%, 67%, 100% of y_max
-      [0.0, 0.33, 0.67, 1.0].each do |frac|
+      [ 0.0, 0.33, 0.67, 1.0 ].each do |frac|
         val = (y_max * frac).round
         yp  = y_pos(val).round(1)
         buf << %(<text x="-5" y="#{(yp + 3.5).round(1)}" text-anchor="end" fill="#{MUTED_COLOR}" font-size="9" font-family="monospace">#{val}</text>)

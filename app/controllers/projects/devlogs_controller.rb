@@ -2,7 +2,7 @@ class Projects::DevlogsController < ApplicationController
   TEST_TIME_SECONDS = 15.minutes.to_i
 
   before_action :set_project
-  before_action :set_devlog, only: %i[show edit update destroy versions commits]
+  before_action :set_devlog, only: %i[show edit update destroy versions]
   before_action :require_hackatime_project, only: %i[create]
   before_action :sync_hackatime_projects, only: %i[create]
 

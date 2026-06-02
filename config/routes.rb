@@ -734,7 +734,6 @@ Rails.application.routes.draw do
     resources :devlogs, only: %i[show create edit update destroy], module: :projects, shallow: false do
       member do
         get :versions
-        get :commits
       end
       collection do
         get :preview_time

@@ -32,8 +32,9 @@ class Admin::Certification::YswsController < Admin::Certification::ApplicationCo
 
     @devlog_windows = devlog_windows_for_review(@review)
     @devlog_commits = begin
-      commits = load_commits_with_stats(@devlog_windows, @review.project)
-      filter_commits_by_author(commits,
+      load_commits_with_stats(
+        @devlog_windows,
+        @review.project,
         github_username: @repo_info&.dig(:username),
         email:           @review.user.email
       )
@@ -70,23 +71,11 @@ class Admin::Certification::YswsController < Admin::Certification::ApplicationCo
 
   private
 
-  # Filters a { devlog_id => [commits] } hash to only commits by the submitting user.
-  # Matches on GitHub login (approach 1: repo owner = their username) or email (approach 2).
-  def filter_commits_by_author(commits_by_devlog, github_username:, email:)
-    return commits_by_devlog if github_username.blank? && email.blank?
-
-    commits_by_devlog.transform_values do |commits|
-      commits.select do |c|
-        (github_username.present? && c[:author_login]&.downcase == github_username.downcase) ||
-          (email.present? && c[:author_email]&.downcase == email.downcase)
-      end
-    end
-  end
 
   # Fetches all commits in the review period and buckets them by devlog ID.
   # Returns { devlog_id (integer) => [commit_hash, ...] }.
   # Adds/deletions are fetched per-commit in parallel threads (not in list response).
-  def load_commits_with_stats(windows, project)
+  def load_commits_with_stats(windows, project, github_username: nil, email: nil)
     return {} if windows.empty?
 
     provider = GitHost::Base.for(project.repo_url)
@@ -98,6 +87,17 @@ class Admin::Certification::YswsController < Admin::Certification::ApplicationCo
     all_commits = provider.fetch_commits(since: all_since, before: all_before)
     return {} if all_commits.empty?
 
+    # Filter by author before fetching stats — list response already has author_login
+    # and author_email, so we avoid stat API calls for commits we'd discard anyway.
+    if github_username.present? || email.present?
+      all_commits = all_commits.select do |c|
+        (github_username.present? && c[:author_login]&.downcase == github_username.downcase) ||
+          (email.present? && c[:author_email]&.downcase == email.downcase)
+      end
+    end
+
+    return {} if all_commits.empty?
+
     # Fetch per-commit stats in parallel, capped at 10 concurrent connections
     # to avoid EMFILE (too many open files) on large commit histories.
     all_commits_with_stats = all_commits.each_slice(10).flat_map do |batch|
@@ -107,7 +107,7 @@ class Admin::Certification::YswsController < Admin::Certification::ApplicationCo
     windows.transform_values do |window|
       since_t  = Time.parse(window[:since])
       before_t = Time.parse(window[:before])
-      all_commits_with_stats.select { |c| c[:authored_at]&.between?(since_t, before_t) }
+      all_commits_with_stats.select { |c| c[:authored_at] && c[:authored_at] >= since_t && c[:authored_at] < before_t }
     end
   end
 

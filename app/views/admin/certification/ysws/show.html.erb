@@ -334,7 +334,7 @@
 
               <div class="devlog-git-section">
                 <div class="git-label">Git Activity</div>
-                <%= raw Certification::CommitGraphBuilder.new(
+                <%= Certification::CommitGraphBuilder.new(
                       @devlog_commits[devlog_review.post_devlog_id] || []
                     ).svg %>
               </div>
