@@ -203,8 +203,12 @@ export default class extends Controller {
 
     if (this.hasFormTarget) {
       this.formTarget.action = postUrl;
-      const csrfToken = document.querySelector("meta[name='csrf-token']")?.content;
-      const tokenField = this.formTarget.querySelector("input[name='authenticity_token']");
+      const csrfToken = document.querySelector(
+        "meta[name='csrf-token']",
+      )?.content;
+      const tokenField = this.formTarget.querySelector(
+        "input[name='authenticity_token']",
+      );
       if (csrfToken && tokenField) tokenField.value = csrfToken;
     }
     this.previewTimeUrlValue = previewUrl;
