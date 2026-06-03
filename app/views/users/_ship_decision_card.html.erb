@@ -66,4 +66,17 @@
       </div>
     </section>
   <% end %>
+
+  <% if decision.verdict_video.attached? %>
+    <section class="ship-decision-card__video-section" aria-label="Shipwright review video">
+      <p class="ship-decision-card__video-label">Review video</p>
+      <div class="ship-decision-card__video-frame">
+        <%= video_tag url_for(decision.verdict_video),
+                      controls: true,
+                      playsinline: true,
+                      preload: "metadata",
+                      class: "ship-decision-card__video" %>
+      </div>
+    </section>
+  <% end %>
 </article>

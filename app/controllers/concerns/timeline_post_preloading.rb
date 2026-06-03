@@ -13,7 +13,10 @@ module TimelinePostPreloading
       grouped["Post::ShipEvent"],
       postable: [ :attachments_attachments, { mission_submission: :mission } ]
     )
-    preload_timeline_group(grouped[Post::PRIVATE_SHIP_DECISION_TYPE], postable: :reviewer)
+    preload_timeline_group(
+      grouped[Post::PRIVATE_SHIP_DECISION_TYPE],
+      postable: [ :reviewer, { verdict_video_attachment: :blob } ]
+    )
   end
 
   def preload_timeline_group(records, associations)
