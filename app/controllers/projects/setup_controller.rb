@@ -2,6 +2,7 @@ class Projects::SetupController < ApplicationController
   layout "onboarding"
 
   before_action :require_signed_in!
+  before_action :redirect_if_setup_complete, except: %i[welcome]
   before_action :load_setup_project_for_prefill, only: %i[name missions]
   before_action :load_setup_project, only: %i[link_account welcome]
 
@@ -93,6 +94,7 @@ class Projects::SetupController < ApplicationController
     if existing
       existing.update!(detached_at: nil, attached_at: Time.current)
     else
+      project.current_mission_attachment&.detach!
       project.mission_attachments.create!(mission: mission, attached_at: Time.current)
     end
 
@@ -134,6 +136,14 @@ class Projects::SetupController < ApplicationController
   def require_signed_in!
     return if current_user.present?
     redirect_to root_path, alert: "Please sign in to start a project."
+  end
+
+  def redirect_if_setup_complete
+    return unless current_user&.hca_linked?
+    return unless current_user.projects.exists?
+
+    project = find_setup_project
+    redirect_to project ? project_path(project) : root_path
   end
 
   def load_setup_project
