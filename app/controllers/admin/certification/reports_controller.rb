@@ -1,5 +1,4 @@
-module Admin
-  class ReportsController < Admin::ApplicationController
+class Admin::Certification::ReportsController < Admin::Certification::ApplicationController
     before_action :set_report, only: [ :show, :review, :dismiss ]
 
     def index
@@ -60,7 +59,7 @@ module Admin
     def process_demo_broken
       authorize ::Project::Report
       ProcessDemoBrokenReportsJob.perform_later
-      redirect_to admin_reports_path, notice: "Demo broken reports processing job has been queued"
+      redirect_to admin_certification_reports_path, notice: "Demo broken reports processing job has been queued"
     end
 
     private
@@ -82,10 +81,9 @@ module Admin
             status: [ old_status, @report.status ]
           }
         )
-        redirect_to admin_reports_path, notice: notice_message
+        redirect_to admin_certification_reports_path, notice: notice_message
       else
-        redirect_to admin_report_path(@report), alert: "Failed to update report"
+        redirect_to admin_certification_report_path(@report), alert: "Failed to update report"
       end
     end
-  end
 end

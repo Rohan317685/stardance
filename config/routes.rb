@@ -644,15 +644,6 @@ Rails.application.routes.draw do
     resources :sw_vibes, only: [ :index ]
     resources :suspicious_votes, only: [ :index ]
     resources :audit_logs, only: [ :index, :show ]
-    resources :reports, only: [ :index, :show ] do
-      collection do
-        post :process_demo_broken
-      end
-      member do
-        post :review
-        post :dismiss
-      end
-    end
     resources :fulfillment_payouts, only: [ :index, :show ] do
       member do
         post :approve
@@ -720,6 +711,16 @@ Rails.application.routes.draw do
         member do
           post :pay
           post :reject
+        end
+      end
+
+      resources :reports, path: "report", only: [ :index, :show ] do
+        collection do
+          post :process_demo_broken
+        end
+        member do
+          post :review
+          post :dismiss
         end
       end
     end

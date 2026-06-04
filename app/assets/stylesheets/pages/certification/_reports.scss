@@ -59,12 +59,16 @@
     transition: all 0.2s ease;
     margin-bottom: var(--space-l);
 
-    @media (prefers-reduced-motion: reduce) { transition: none; }
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+    }
 
     &:hover {
       background: var(--color-space-surface-strong);
       transform: translateX(-4px);
-      @media (prefers-reduced-motion: reduce) { transform: none; }
+      @media (prefers-reduced-motion: reduce) {
+        transform: none;
+      }
     }
   }
 
@@ -196,13 +200,17 @@
       transition: all 0.2s ease;
       text-decoration: none;
 
-      @media (prefers-reduced-motion: reduce) { transition: none; }
+      @media (prefers-reduced-motion: reduce) {
+        transition: none;
+      }
 
       &:hover {
         background: rgba(149, 219, 255, 0.2);
         transform: translateY(-2px);
         box-shadow: 0 4px 12px rgba(149, 219, 255, 0.3);
-        @media (prefers-reduced-motion: reduce) { transform: none; }
+        @media (prefers-reduced-motion: reduce) {
+          transform: none;
+        }
       }
     }
   }
@@ -257,10 +265,11 @@
           border-color: var(--color-brand-blue);
         }
 
-        option { background: rgb(5, 4, 24); }
+        option {
+          background: rgb(5, 4, 24);
+        }
       }
     }
-
   }
 
   // Leaderboard card (used in partial)
@@ -273,7 +282,9 @@
       gap: var(--space-s);
       margin-bottom: var(--space-m);
 
-      h3 { margin: 0; }
+      h3 {
+        margin: 0;
+      }
 
       small {
         color: var(--color-space-text-muted);
@@ -325,8 +336,12 @@
         border-bottom: 1px solid var(--color-space-surface-faint);
         transition: background 0.15s ease;
 
-        &:last-child { border-bottom: none; }
-        &:hover { background: var(--color-space-surface-faint); }
+        &:last-child {
+          border-bottom: none;
+        }
+        &:hover {
+          background: var(--color-space-surface-faint);
+        }
       }
 
       td {
@@ -345,12 +360,22 @@
           color: var(--color-brand-mint);
           text-decoration: none;
           font-weight: 600;
-          &:hover { text-decoration: underline; }
+          &:hover {
+            text-decoration: underline;
+          }
         }
 
-        .lb-reviewed { color: var(--color-brand-mint); font-weight: 700; }
-        .lb-dismissed { color: var(--color-space-text-muted); }
-        .lb-total { color: var(--color-space-text); font-weight: 700; }
+        .lb-reviewed {
+          color: var(--color-brand-mint);
+          font-weight: 700;
+        }
+        .lb-dismissed {
+          color: var(--color-space-text-muted);
+        }
+        .lb-total {
+          color: var(--color-space-text);
+          font-weight: 700;
+        }
       }
     }
 
@@ -400,14 +425,20 @@
       border-bottom: 1px solid var(--color-space-surface-faint);
       transition: all 0.15s ease;
 
-      @media (prefers-reduced-motion: reduce) { transition: none; }
+      @media (prefers-reduced-motion: reduce) {
+        transition: none;
+      }
 
-      &:last-child { border-bottom: none; }
+      &:last-child {
+        border-bottom: none;
+      }
 
       &:hover {
         background: var(--color-space-surface-faint);
         transform: translateX(3px);
-        @media (prefers-reduced-motion: reduce) { transform: none; }
+        @media (prefers-reduced-motion: reduce) {
+          transform: none;
+        }
       }
     }
 
@@ -428,7 +459,10 @@
       color: var(--color-space-text);
       text-decoration: none;
       font-weight: 600;
-      &:hover { color: var(--color-brand-mint); text-decoration: underline; }
+      &:hover {
+        color: var(--color-brand-mint);
+        text-decoration: underline;
+      }
     }
 
     .col-project .deleted-project {
@@ -452,7 +486,10 @@
       a {
         color: var(--color-space-text);
         text-decoration: none;
-        &:hover { color: var(--color-brand-mint); text-decoration: underline; }
+        &:hover {
+          color: var(--color-brand-mint);
+          text-decoration: underline;
+        }
       }
     }
 
@@ -478,12 +515,16 @@
       font-size: var(--font-size-xs);
       transition: all 0.2s ease;
       white-space: nowrap;
-      @media (prefers-reduced-motion: reduce) { transition: none; }
+      @media (prefers-reduced-motion: reduce) {
+        transition: none;
+      }
 
       &:hover {
         transform: translateY(-1px);
         box-shadow: 0 4px 10px rgba(129, 255, 255, 0.35);
-        @media (prefers-reduced-motion: reduce) { transform: none; }
+        @media (prefers-reduced-motion: reduce) {
+          transform: none;
+        }
       }
     }
 
@@ -497,7 +538,9 @@
       cursor: pointer;
       border: 2px solid;
       transition: all 0.2s ease;
-      @media (prefers-reduced-motion: reduce) { transition: none; }
+      @media (prefers-reduced-motion: reduce) {
+        transition: none;
+      }
     }
 
     .btn-quick-review {
@@ -508,7 +551,9 @@
       &:hover {
         background: rgba(129, 255, 255, 0.25);
         transform: translateY(-1px);
-        @media (prefers-reduced-motion: reduce) { transform: none; }
+        @media (prefers-reduced-motion: reduce) {
+          transform: none;
+        }
       }
     }
 
@@ -522,7 +567,9 @@
         color: var(--color-brand-salmon);
         border-color: var(--color-brand-salmon);
         transform: translateY(-1px);
-        @media (prefers-reduced-motion: reduce) { transform: none; }
+        @media (prefers-reduced-motion: reduce) {
+          transform: none;
+        }
       }
     }
   }
@@ -539,7 +586,9 @@
       flex-wrap: wrap;
       margin-top: var(--space-xs);
 
-      h1 { margin: 0; }
+      h1 {
+        margin: 0;
+      }
     }
   }
 
@@ -576,8 +625,13 @@
     padding: var(--space-s) 0;
     border-bottom: 1px solid var(--color-space-surface-faint);
 
-    &:first-child { padding-top: 0; }
-    &:last-child { border-bottom: none; padding-bottom: 0; }
+    &:first-child {
+      padding-top: 0;
+    }
+    &:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
   }
 
   .detail-key {
@@ -597,7 +651,9 @@
       color: var(--color-brand-mint);
       text-decoration: none;
       font-weight: 600;
-      &:hover { text-decoration: underline; }
+      &:hover {
+        text-decoration: underline;
+      }
     }
   }
 
@@ -644,13 +700,17 @@
       background: rgba(129, 255, 255, 0.1);
       color: var(--color-brand-mint);
       transition: all 0.2s ease;
-      @media (prefers-reduced-motion: reduce) { transition: none; }
+      @media (prefers-reduced-motion: reduce) {
+        transition: none;
+      }
 
       &:hover {
         background: rgba(129, 255, 255, 0.25);
         transform: translateY(-2px);
         box-shadow: 0 4px 12px rgba(129, 255, 255, 0.3);
-        @media (prefers-reduced-motion: reduce) { transform: none; }
+        @media (prefers-reduced-motion: reduce) {
+          transform: none;
+        }
       }
     }
 
@@ -665,14 +725,18 @@
       background: rgba(255, 255, 255, 0.05);
       color: var(--color-space-text-muted);
       transition: all 0.2s ease;
-      @media (prefers-reduced-motion: reduce) { transition: none; }
+      @media (prefers-reduced-motion: reduce) {
+        transition: none;
+      }
 
       &:hover {
         border-color: var(--color-brand-salmon);
         color: var(--color-brand-salmon);
         background: rgba(255, 141, 157, 0.1);
         transform: translateY(-2px);
-        @media (prefers-reduced-motion: reduce) { transform: none; }
+        @media (prefers-reduced-motion: reduce) {
+          transform: none;
+        }
       }
     }
   }
@@ -720,12 +784,16 @@
     text-decoration: none;
     transition: all 0.2s ease;
     border: 1px solid rgba(149, 219, 255, 0.3);
-    @media (prefers-reduced-motion: reduce) { transition: none; }
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+    }
 
     &:hover {
       background: rgba(149, 219, 255, 0.25);
       transform: translateY(-2px);
-      @media (prefers-reduced-motion: reduce) { transform: none; }
+      @media (prefers-reduced-motion: reduce) {
+        transform: none;
+      }
     }
 
     &--navigate {
@@ -733,7 +801,9 @@
       color: var(--color-brand-lilac);
       border-color: rgba(235, 183, 255, 0.3);
 
-      &:hover { background: rgba(235, 183, 255, 0.22); }
+      &:hover {
+        background: rgba(235, 183, 255, 0.22);
+      }
     }
   }
 

@@ -4,7 +4,7 @@
 <% end %>
 
 <main class="admin-reports">
-  <%= link_to "← back to reports", admin_reports_path, class: "btn-back" %>
+  <%= link_to "← back to reports", admin_certification_reports_path, class: "btn-back" %>
 
   <div class="reports-show-header">
     <div class="header-meta">
@@ -50,8 +50,8 @@
 
         <% if @report.pending? %>
           <div class="report-actions">
-            <%= button_to "✅ Mark as Reviewed", review_admin_report_path(@report), method: :post, class: "btn-mark-reviewed" %>
-            <%= button_to "✗ Dismiss Report", dismiss_admin_report_path(@report), method: :post, class: "btn-dismiss" %>
+            <%= button_to "✅ Mark as Reviewed", review_admin_certification_report_path(@report), method: :post, class: "btn-mark-reviewed" %>
+            <%= button_to "✗ Dismiss Report", dismiss_admin_certification_report_path(@report), method: :post, class: "btn-dismiss" %>
           </div>
         <% elsif @report.reviewed? %>
           <div class="status-notice status-notice--reviewed">✅ This report has been reviewed</div>
