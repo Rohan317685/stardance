@@ -44,7 +44,6 @@ class Gorse::PostPayload
     post.postable.blank? ||
       hidden_devlog? ||
       hidden_ship_event? ||
-      private_ship_decision? ||
       post.project&.deleted_at.present? ||
       post.user&.identity_verified? == false
   end
@@ -90,10 +89,6 @@ class Gorse::PostPayload
 
     def hidden_ship_event?
       post.postable_type == "Post::ShipEvent" && post.postable.certification_status == "rejected"
-    end
-
-    def private_ship_decision?
-      post.postable_type == Post::PRIVATE_SHIP_DECISION_TYPE
     end
 
     def has_media?

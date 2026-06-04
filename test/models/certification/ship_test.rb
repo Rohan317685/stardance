@@ -76,7 +76,6 @@ class Certification::ShipTest < ActiveSupport::TestCase
     assert_not Post.visible_to(@outsider).where(id: post.id).exists?
     assert_not Post.visible_to(nil).where(id: post.id).exists?
     assert_not Post.authored_by_verified.where(id: post.id).exists?
-    assert Gorse::PostPayload.new(post).hidden?
 
     Flipper.disable(:week_1_release)
     assert_not Post.visible_to(@owner).where(id: post.id).exists?
