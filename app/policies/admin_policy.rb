@@ -46,4 +46,7 @@ class AdminPolicy < ApplicationPolicy
   def manage_draft_shop_items?
     user.admin? || user.shop_manager?
   end
+  def access_raffles?
+    user.admin? || user.has_role?(:raffle_admin)
+  end
 end

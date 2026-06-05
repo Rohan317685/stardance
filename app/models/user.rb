@@ -104,6 +104,9 @@ class User < ApplicationRecord
   has_many :wishlisted_shop_items, through: :shop_wishlists, source: :shop_item
   has_many :sold_items, class_name: "ShopItem::HackClubberItem", foreign_key: :user_id
 
+  has_one :raffle_participant, class_name: "Raffle::Participant", dependent: :destroy
+  has_one :raffle_referral_as_referred, class_name: "Raffle::Referral", foreign_key: :referred_user_id, dependent: :destroy
+
   has_one_attached :banner
 
   enum :verification_status, {
@@ -207,6 +210,10 @@ class User < ApplicationRecord
   include User::Profile
   include User::Preferences
   include User::UsernameBloomSync
+
+  # Tracks platform signups/verifications for the raffle referral program
+  # (no-ops unless the signup carried a raffle referral code). See the engine.
+  include Raffle::ReferralTrackable
 
   after_create_commit :increment_signup_counter, if: -> { Flipper.enabled?(:new_onboarding) }
 
