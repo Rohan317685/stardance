@@ -9,6 +9,7 @@
 #  in_unified_db         :boolean          default(FALSE), not null
 #  original_minutes      :integer
 #  repo_checked_at       :datetime
+#  returned_at           :datetime
 #  reviewed_at           :datetime
 #  spotchecked_at        :datetime
 #  summary_justification :text
@@ -54,5 +55,24 @@ module Certification
 
     validates :original_minutes, numericality: { greater_than_or_equal_to: 0 }, allow_nil: false
     validates :approved_minutes, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
+
+    def check_and_update_unified_db_status!
+      api_key  = Rails.application.credentials.dig(:ysws_review, :airtable_api_key) ||
+                 Rails.application.credentials&.airtable&.api_key ||
+                 ENV["AIRTABLE_API_KEY"]
+      base_id  = Rails.application.credentials.dig(:ysws_review, :airtable_base_id) ||
+                 ENV["YSWS_REVIEW_AIRTABLE_BASE_ID"]
+      tbl_name = Rails.application.credentials.dig(:ysws_review, :airtable_table_name) ||
+                 ENV["YSWS_REVIEW_AIRTABLE_TABLE"] ||
+                 "YSWS Project Submission"
+
+      table = Norairrecord.table(api_key, base_id, tbl_name)
+      record = table.all(filter: "{review_id} = '#{id}'").first
+      already_in_db = record.present? && record["Automation - YSWS Record ID"].present?
+
+      update_column(:in_unified_db, already_in_db) if in_unified_db != already_in_db
+    rescue Faraday::Error => e
+      Rails.logger.warn "[Certification::Ysws] Could not check unified DB status for ##{id}: #{e.message}"
+    end
   end
 end
