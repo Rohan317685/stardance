@@ -194,19 +194,19 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@fullstory/browser@npm:^2.0.6":
-  version: 2.0.6
-  resolution: "@fullstory/browser@npm:2.0.6"
+"@fullstory/browser@npm:^2.0.8":
+  version: 2.0.8
+  resolution: "@fullstory/browser@npm:2.0.8"
   dependencies:
-    "@fullstory/snippet": "npm:2.0.5"
-  checksum: 10c0/2df4c494ead5f7ef327a6b797b7f4a33ce4519aae41d28bb7dabe7a44cec8898eafbcaef1fbb4b22809c9c7f6a4bb869e8431ff2dd1107b06cbf97689f988ba6
+    "@fullstory/snippet": "npm:2.0.6"
+  checksum: 10c0/dd64a5480403fdc4a6935459b38c564d1a48e0afefbe682a279bdf6c0ff01905f4df2f0e956c64a29339f43d32a4261f9a5af562ae9f7ecab549811f43290c56
   languageName: node
   linkType: hard
 
-"@fullstory/snippet@npm:2.0.5":
-  version: 2.0.5
-  resolution: "@fullstory/snippet@npm:2.0.5"
-  checksum: 10c0/627c6a5a913d188e9933320d4d02291ff1e4dda0b72d7874799cb52acc62d42456dbaac281b7c1d7b335837895da42ac38df87a18f1903191172e97f252026e9
+"@fullstory/snippet@npm:2.0.6":
+  version: 2.0.6
+  resolution: "@fullstory/snippet@npm:2.0.6"
+  checksum: 10c0/2e9b5008112a26936ea4d520b3d029544ae286b9126aa34069f1e24d159b254abe6ece16113cf970682f3e782edf5d9db07b88e40cba91d39d8b1f06b44fa009
   languageName: node
   linkType: hard
 
@@ -262,7 +262,7 @@ __metadata:
   resolution: "app@workspace:."
   dependencies:
     "@emoji-mart/data": "npm:^1.2.1"
-    "@fullstory/browser": "npm:^2.0.6"
+    "@fullstory/browser": "npm:^2.0.8"
     "@hotwired/stimulus": "npm:^3.2.2"
     "@hotwired/turbo-rails": "npm:^8.0.20"
     "@rails/activestorage": "npm:^8.1.100"
@@ -273,7 +273,7 @@ __metadata:
     emoji-mart: "npm:^5.6.0"
     esbuild: "npm:^0.27.0"
     gsap: "npm:^3.14.2"
-    prettier: "npm:3.6.2"
+    prettier: "npm:3.8.3"
     xp.css: "npm:^0.2.6"
   languageName: unknown
   linkType: soft
@@ -782,12 +782,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"prettier@npm:3.6.2":
-  version: 3.6.2
-  resolution: "prettier@npm:3.6.2"
+"prettier@npm:3.8.3":
+  version: 3.8.3
+  resolution: "prettier@npm:3.8.3"
   bin:
     prettier: bin/prettier.cjs
-  checksum: 10c0/488cb2f2b99ec13da1e50074912870217c11edaddedeadc649b1244c749d15ba94e846423d062e2c4c9ae683e2d65f754de28889ba06e697ac4f988d44f45812
+  checksum: 10c0/754816fd7593eb80f6376d7476d463e832c38a12f32775a82683adb6e35b772b1f484d65f19401507b983a8c8a7cd5a4a9f12006bd56491e8f35503473f77473
   languageName: node
   linkType: hard
 
