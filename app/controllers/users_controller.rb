@@ -1,6 +1,9 @@
 class UsersController < ApplicationController
   include TimelinePostPreloading
 
+  discover_rail_widgets :achievements,
+                        context: -> { { profile_user: @user } }
+
   before_action :set_user
   before_action :authorize_user, only: %i[update followers following]
 
