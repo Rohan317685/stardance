@@ -14,6 +14,8 @@ module OutpostEmailing
   private
 
   def handle_outpost_email
+    return unless Flipper.enabled?(:outpost_email)
+
     mark_outpost_visit if params[:ref] == OUTPOST_REF
     deliver_pending_outpost_email
   end

@@ -3,7 +3,20 @@ require "test_helper"
 class OutpostEmailTest < ActionDispatch::IntegrationTest
   include ActionMailer::TestHelper
 
-  setup { @user = users(:one) }
+  setup do
+    @user = users(:one)
+    Flipper.enable(:outpost_email)
+  end
+
+  teardown { Flipper.disable(:outpost_email) }
+
+  test "no email is sent when the outpost_email flag is disabled" do
+    Flipper.disable(:outpost_email)
+    sign_in @user
+
+    assert_no_enqueued_emails { get "/outpost" }
+    assert_nil @user.reload.outpost_email_sent_at
+  end
 
   test "logged-in visitor to /outpost gets the email exactly once" do
     sign_in @user
