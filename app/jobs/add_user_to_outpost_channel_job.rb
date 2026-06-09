@@ -10,7 +10,7 @@ class AddUserToOutpostChannelJob < ApplicationJob
     user = User.find_by(id: user_id)
     return if user&.slack_id.blank?
 
-    client = Slack::Web::Client.new(token: Rails.application.credentials.dig(:slack, :bot_token))
+    client = Slack::Web::Client.new(token: Rails.application.credentials.dig(:slack, :outpost_bot_token))
     client.conversations_invite(channel: OUTPOST_CHANNEL_ID, users: user.slack_id)
   rescue Slack::Web::Api::Errors::SlackError => e
     # The user is already a member — nothing to do.
