@@ -32,12 +32,11 @@
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6);
+}
 
-  // Reset landing page global styles so the email renders as intended
-  &,
-  * {
-    color: revert;
-    background-color: revert;
-    font-family: revert;
-  }
+.email-preview__iframe {
+  display: block;
+  width: 100%;
+  border: none;
+  overflow: hidden;
 }

@@ -860,6 +860,7 @@ Rails.application.routes.draw do
   get "edu", to: "landing#edu", as: :edu
 
   get "emails/:name", to: "email_templates#show", as: :public_email_template
+  get "emails/:name/content", to: "email_templates#content", as: :public_email_template_content
 
   # Guides
   resources :guides, only: [ :index, :show ]

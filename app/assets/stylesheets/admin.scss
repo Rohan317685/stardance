@@ -471,7 +471,7 @@ a.super-mega-dashboard-btn {
   min-width: 10rem;
 }
 
-.info-rows>* {
+.info-rows > * {
   margin: 0.25em 0 0 0.5em;
   display: flex;
   gap: var(--space-xs);
@@ -501,7 +501,7 @@ a.super-mega-dashboard-btn {
   gap: 0.5rem;
   margin-bottom: var(--space-m);
 
-  >.card {
+  > .card {
     flex: 1;
   }
 }

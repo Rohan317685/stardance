@@ -18,7 +18,8 @@
       </div>
 
       <div class="email-preview__frame">
-        <%= @compiled_html.html_safe %>
+        <iframe src="<%= @content_url %>" class="email-preview__iframe" title="Email preview"
+                onload="this.style.height = this.contentDocument.body.scrollHeight + 'px'"></iframe>
       </div>
     </div>
   </body>
