@@ -610,8 +610,8 @@
     white-space: nowrap;
 
     &--own {
-      background: rgba(251, 146, 60, 0.2);
-      color: #fb923c;
+      background: rgba(255, 176, 122, 0.2);
+      color: var(--color-brand-orange);
     }
   }
 
