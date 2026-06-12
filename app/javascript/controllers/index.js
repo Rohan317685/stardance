@@ -190,6 +190,15 @@ application.register(
 import ModalController from "./modal_controller";
 application.register("modal", ModalController);
 
+import NotificationActorsController from "./notification_actors_controller";
+application.register("notification-actors", NotificationActorsController);
+
+import NotificationsBadgeController from "./notifications_badge_controller";
+application.register("notifications-badge", NotificationsBadgeController);
+
+import NotificationsInboxController from "./notifications_inbox_controller";
+application.register("notifications-inbox", NotificationsInboxController);
+
 import OnboardingExperienceSliderController from "./onboarding_experience_slider_controller";
 application.register(
   "onboarding-experience-slider",
