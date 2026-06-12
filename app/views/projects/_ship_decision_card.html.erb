@@ -58,8 +58,8 @@
   <% end %>
 
   <% if decision.verdict_video.attached? %>
-    <section class="feed-post-card__body ship-decision-card__video-section" aria-label="Shipwright review video">
-      <p class="ship-decision-card__video-label">Review video</p>
+    <section class="feed-post-card__body ship-decision-card__video-section" aria-label="Shipwright walkthrough video">
+      <p class="ship-decision-card__video-label">Shipwright walkthrough</p>
       <div class="ship-decision-card__video-frame">
         <%= video_tag url_for(decision.verdict_video),
                       controls: true,
