@@ -68,6 +68,22 @@ Hidden until expanded. Markdown works here too.
 Renders a native `<details>`/`<summary>` (`guide-collapse` block). Used heavily
 for spoiler-style solutions in mission guides.
 
+### `:::var` — declare a guide variable
+
+```markdown
+:::var name="project_name" label="What's your project called?" placeholder="my-cool-app"
+:::
+```
+
+Renders a text input (`guide-var` block). See
+[Guide variables](#guide-variables-mission-guides-only) below for how readers'
+values flow into the rest of the guide.
+
+- `name` — required; lowercase letters/digits/`_`/`-`, must start with a
+  letter. An invalid name renders nothing.
+- `label` — optional; defaults to a humanized `name` ("Project name").
+- `placeholder` — optional input placeholder.
+
 ⚠️ An **unknown** block shortcode name (e.g. `:::video`) is silently deleted,
 content and all — typos don't error, they vanish.
 
@@ -80,6 +96,37 @@ cannot contain `[`, `]`, or newlines. Unknown names are removed.
 | --- | --- | --- |
 | `::kbd[...]` | `Press ::kbd[Ctrl] + ::kbd[S]` | `<kbd class="guide-kbd">` keycap styling |
 | `::mark[...]` | `the ::mark[important] part` | `<mark class="guide-mark">` highlight |
+| `::var-ref[name]` | `Open ::var-ref[project_name]` | the reader's value for that variable, verbatim |
+| `::var-slug[name]` | `cd ::var-slug[project_name]` | the value sluggified (lowercase, spaces → dashes, punctuation stripped) |
+
+## Guide variables (mission guides only)
+
+Declare an input once with `:::var`, then reference the reader's answer
+anywhere with `::var-ref[...]` / `::var-slug[...]` — including **inside inline
+code and fenced code blocks**, which is the main use case:
+
+````markdown
+:::var name="project_name" label="What's your project called?"
+:::
+
+```bash
+npx create-app ::var-slug[project_name]
+```
+````
+
+How it behaves:
+
+- Entirely client-side: values live in the reader's `localStorage` (keyed
+  per mission slug) and are painted in by
+  `mission_guide_variables_controller.js`. Nothing is sent to the server, and
+  the rendered HTML stays cacheable.
+- Until the reader types something, references show the variable name in a
+  muted "empty" style.
+- Declaring the same `name` in multiple steps renders multiple inputs that
+  stay in sync — handy since mission guides paginate by step.
+- ⚠️ Only the **mission guide** page wires up the Stimulus controller. In
+  static `/guides` topics the input renders but references never fill in —
+  don't use variables there.
 
 ## Document structure: `##` headings are special
 
