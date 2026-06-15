@@ -1,7 +1,7 @@
 <%
   rating_closed = local_assigns.fetch(:rating_closed, false)
   title = rating_closed ? "Rating isn't open yet!" : "Err. Err. Something's wrong!?"
-  subtitle = "Rating will open soon." if rating_closed
+  subtitle = rating_closed ? "Rating will open soon." : nil
   body = if rating_closed && current_user
     "For now, you can still work on and ship your project. We'll send an announcement once it's open!"
   elsif rating_closed
