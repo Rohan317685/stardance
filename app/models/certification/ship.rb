@@ -194,7 +194,7 @@ module Certification
     end
 
     def self.rank_for_reviewer_with_count(reviewer_id, new_count, now: Time.current)
-      other_counts = where.not(reviewer_id: [nil, reviewer_id])
+      other_counts = where.not(reviewer_id: [ nil, reviewer_id ])
                        .where.not(status: :pending)
                        .where(decided_at: now.beginning_of_day..)
                        .joins(:reviewer)
@@ -211,7 +211,7 @@ module Certification
       list = other_counts.map { |(rid, name), count| { id: rid, name: name, count: count } }
       list << { id: reviewer_id, name: reviewer_name, count: new_count }
 
-      sorted = list.sort_by { |item| [-item[:count], item[:name] || ""] }
+      sorted = list.sort_by { |item| [ -item[:count], item[:name] || "" ] }
 
       index = sorted.index { |item| item[:id] == reviewer_id }
       index ? index + 1 : 1
