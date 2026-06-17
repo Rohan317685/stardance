@@ -12,7 +12,7 @@ class Home::FeedsController < ApplicationController
   def show
     authorize :home, :feed?
     @feed_request_id = SecureRandom.uuid
-    @current_tab = TABS.include?(params[:tab]) ? params[:tab] : "for_you"
+    @current_tab = TABS.include?(params[:tab]) && Flipper.enabled?(:week_3_release, current_user) ? params[:tab] : "for_you"
     load_feed
     load_recommended_projects if first_page? && @current_tab == "for_you"
     render layout: false
