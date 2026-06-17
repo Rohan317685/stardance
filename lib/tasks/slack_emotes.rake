@@ -5,8 +5,15 @@ require "set"
 namespace :slack_emotes do
   desc "Import custom emoji from the Slack workspace into the Stardance emoji picker"
   task import: :environment do
+    token = Rails.application.credentials.dig(:slack, :bot_token) || ENV["SLACK_BOT_TOKEN"]
+
+    if token.blank?
+      puts "Skipped Slack emote import: missing slack.bot_token credential or SLACK_BOT_TOKEN"
+      next
+    end
+
     client = Slack::Web::Client.new(
-      token: Rails.application.credentials.dig(:slack, :bot_token) || ENV["SLACK_BOT_TOKEN"]
+      token:
     )
 
     response = client.emoji_list
