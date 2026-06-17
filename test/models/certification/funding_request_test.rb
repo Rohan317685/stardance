@@ -39,6 +39,8 @@
 require "test_helper"
 
 class Certification::FundingRequestTest < ActiveSupport::TestCase
+  HCB_GRANT_RESPONSE = { "id" => "test_grant_123" }.freeze
+
   def setup
     Flipper.enable(:hardware_flow)
     @owner = User.create!(
@@ -69,19 +71,24 @@ class Certification::FundingRequestTest < ActiveSupport::TestCase
     fr = @project.certification_funding_requests.create!(
       user: @owner, complexity_tier: 3, requested_amount_cents: 6_000, status: :pending
     )
-    fr.update!(reviewer: @reviewer, status: :approved)
+    HCBService.stub(:create_card_grant, HCB_GRANT_RESPONSE) do
+      fr.update!(reviewer: @reviewer, status: :approved)
+    end
 
     assert_equal "build", @project.reload.hardware_stage
     # tier 3 (S) max $180, approved $60 => $120 unused * 2 = 240
     assert_equal 240, @owner.reload.outpost_discount_stardust
     assert_equal Certification::FundingRequest::REVIEW_BOUNTY, fr.reload.stardust_earned
+    assert_equal "test_grant_123", fr.reload.hcb_grant_hashid
   end
 
   test "reviewer can approve for less than requested, increasing the discount" do
     fr = @project.certification_funding_requests.create!(
       user: @owner, complexity_tier: 3, requested_amount_cents: 10_000, status: :pending
     )
-    fr.update!(reviewer: @reviewer, status: :approved, approved_amount_dollars: 40)
+    HCBService.stub(:create_card_grant, HCB_GRANT_RESPONSE) do
+      fr.update!(reviewer: @reviewer, status: :approved, approved_amount_dollars: 40)
+    end
 
     # approved $40 of $180 (S) max => $140 unused * 2 = 280
     assert_equal 280, @owner.reload.outpost_discount_stardust
@@ -91,7 +98,9 @@ class Certification::FundingRequestTest < ActiveSupport::TestCase
     fr = @project.certification_funding_requests.create!(
       user: @owner, complexity_tier: 3, requested_amount_cents: 6_000, status: :pending
     )
-    fr.update!(reviewer: @reviewer, status: :approved)
+    HCBService.stub(:create_card_grant, HCB_GRANT_RESPONSE) do
+      fr.update!(reviewer: @reviewer, status: :approved)
+    end
     assert_equal 240, @owner.reload.outpost_discount_stardust
 
     fr.update!(feedback: "nice work")
@@ -112,7 +121,9 @@ class Certification::FundingRequestTest < ActiveSupport::TestCase
     fr = @project.certification_funding_requests.create!(
       user: @owner, complexity_tier: 3, requested_amount_cents: 6_000, status: :pending
     )
-    fr.update!(reviewer: @reviewer, status: :approved)
+    HCBService.stub(:create_card_grant, HCB_GRANT_RESPONSE) do
+      fr.update!(reviewer: @reviewer, status: :approved)
+    end
     @project.reload
 
     label = "Post at least one build devlog before shipping"
