@@ -46,23 +46,10 @@ export default class extends Controller {
     this.selectedReviewers = new Set();
     this.reviewerCharts = [];
 
-    const cfg = this.baseCfg();
-
-    if (this.hasDataValue && this.dataValue.length > 0) {
-      this.renderActivityCharts(cfg);
-    }
-
-    if (this.hasReviewerDataValue && this.reviewerDataValue.length > 0) {
-      this.renderReviewerPicker();
-      this.initReviewerCharts(cfg);
-    }
-  }
-
-  baseCfg() {
     const gridColor = "rgba(255,255,255,0.06)";
     const tickFont = { family: "var(--font-family-sans)", size: 10 };
     const tickColor = "rgba(255,255,255,0.45)";
-    return {
+    this.cfg = {
       gridColor,
       xScale: {
         ticks: { color: tickColor, font: tickFont, maxTicksLimit: 10 },
@@ -81,60 +68,76 @@ export default class extends Controller {
       },
       tooltip: { mode: "index", intersect: false },
     };
+    this.labels = this.hasDataValue ? this.dataValue.map((d) => d.date) : [];
+
+    if (this.hasDataValue && this.dataValue.length > 0) {
+      this.renderActivityCharts();
+    }
+
+    if (this.hasReviewerDataValue && this.reviewerDataValue.length > 0) {
+      this.renderReviewerPicker();
+      this.initReviewerCharts();
+    }
   }
 
-  renderActivityCharts({ xScale, yScale, gridColor, legend, tooltip }) {
+  #makeLine(canvas, datasets, extraOpts = {}) {
+    const { xScale, yScale, legend, tooltip } = this.cfg;
+    return new Chart(canvas, {
+      type: "line",
+      data: { labels: this.labels, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { labels: legend.labels }, tooltip },
+        scales: { x: xScale, y: { ...yScale, min: 0 } },
+        ...extraOpts,
+      },
+    });
+  }
+
+  #ds(label, data, borderColor, bgAlpha = 0.08, extra = {}) {
+    return {
+      label,
+      data,
+      borderColor,
+      backgroundColor: borderColor.startsWith("#")
+        ? hexToRgba(borderColor, bgAlpha)
+        : borderColor.replace(")", `,${bgAlpha})`),
+      fill: true,
+      tension: 0.3,
+      pointRadius: 2,
+      ...extra,
+    };
+  }
+
+  renderActivityCharts() {
+    const { yScale, gridColor, tooltip } = this.cfg;
     const data = this.dataValue;
-    const labels = data.map((d) => d.date);
-    const netData = data.map((d) => d.approved + d.returned - d.submitted);
 
     this.charts.push(
-      new Chart(this.queueSizeTarget, {
-        type: "line",
-        data: {
-          labels,
-          datasets: [
-            {
-              label: "Queue size",
-              data: data.map((d) => d.queue_size),
-              borderColor: "#FFD598",
-              backgroundColor: "rgba(255,213,152,0.12)",
-              fill: true,
-              tension: 0.3,
-              pointRadius: 2,
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { labels: legend.labels }, tooltip },
-          scales: { x: xScale, y: { ...yScale, min: 0 } },
-        },
-      }),
+      this.#makeLine(this.queueSizeTarget, [
+        this.#ds(
+          "Queue size",
+          data.map((d) => d.queue_size),
+          "#FFD598",
+          0.12,
+        ),
+      ]),
 
-      new Chart(this.medianWaitTarget, {
-        type: "line",
-        data: {
-          labels,
-          datasets: [
-            {
-              label: "Median wait (hours)",
-              data: data.map((d) => d.median_wait_hours ?? null),
-              borderColor: "#EBB7FF",
-              backgroundColor: "rgba(235,183,255,0.08)",
-              fill: true,
-              tension: 0.3,
-              pointRadius: 2,
-              spanGaps: true,
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
+      this.#makeLine(
+        this.medianWaitTarget,
+        [
+          this.#ds(
+            "Median wait (hours)",
+            data.map((d) => d.median_wait_hours ?? null),
+            "#EBB7FF",
+            0.08,
+            { spanGaps: true },
+          ),
+        ],
+        {
           plugins: {
-            legend: { labels: legend.labels },
+            legend: { labels: this.cfg.legend.labels },
             tooltip: {
               ...tooltip,
               callbacks: {
@@ -149,7 +152,7 @@ export default class extends Controller {
             },
           },
           scales: {
-            x: xScale,
+            x: this.cfg.xScale,
             y: {
               ...yScale,
               min: 0,
@@ -157,33 +160,28 @@ export default class extends Controller {
             },
           },
         },
-      }),
+      ),
 
-      new Chart(this.netTarget, {
-        type: "line",
-        data: {
-          labels,
-          datasets: [
-            {
-              label: "Net (decisions − submissions)",
-              data: netData,
-              borderColor: "#81FFFF",
-              borderWidth: 1.5,
-              pointRadius: 2,
-              tension: 0.3,
-              fill: {
-                target: "origin",
-                above: "rgba(129,255,255,0.15)",
-                below: "rgba(255,213,152,0.2)",
-              },
+      this.#makeLine(
+        this.netTarget,
+        [
+          {
+            label: "Net (decisions − submissions)",
+            data: data.map((d) => d.approved + d.returned - d.submitted),
+            borderColor: "#81FFFF",
+            borderWidth: 1.5,
+            pointRadius: 2,
+            tension: 0.3,
+            fill: {
+              target: "origin",
+              above: "rgba(129,255,255,0.15)",
+              below: "rgba(255,213,152,0.2)",
             },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
+          },
+        ],
+        {
           plugins: {
-            legend: { labels: legend.labels },
+            legend: { labels: this.cfg.legend.labels },
             tooltip: {
               ...tooltip,
               callbacks: {
@@ -195,7 +193,7 @@ export default class extends Controller {
             },
           },
           scales: {
-            x: xScale,
+            x: this.cfg.xScale,
             y: {
               ...yScale,
               grid: {
@@ -205,101 +203,61 @@ export default class extends Controller {
             },
           },
         },
-      }),
+      ),
 
-      new Chart(this.throughputTarget, {
-        type: "line",
-        data: {
-          labels,
-          datasets: [
-            {
-              label: "Decisions",
-              data: data.map((d) => d.approved + d.returned),
-              borderColor: "#81FFFF",
-              backgroundColor: "rgba(129,255,255,0.08)",
-              fill: true,
-              tension: 0.3,
-              pointRadius: 2,
-            },
-            {
-              label: "Submitted",
-              data: data.map((d) => d.submitted),
-              borderColor: "#EBB7FF",
-              backgroundColor: "rgba(235,183,255,0.08)",
-              fill: true,
-              tension: 0.3,
-              pointRadius: 2,
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { labels: legend.labels }, tooltip },
-          scales: { x: xScale, y: yScale },
-        },
-      }),
+      this.#makeLine(
+        this.throughputTarget,
+        [
+          this.#ds(
+            "Decisions",
+            data.map((d) => d.approved + d.returned),
+            "#81FFFF",
+          ),
+          this.#ds(
+            "Submitted",
+            data.map((d) => d.submitted),
+            "#EBB7FF",
+          ),
+        ],
+        { scales: { x: this.cfg.xScale, y: yScale } },
+      ),
 
-      new Chart(this.verdictTarget, {
-        type: "line",
-        data: {
-          labels,
-          datasets: [
-            {
-              label: "Approved",
-              data: data.map((d) => d.approved),
-              borderColor: "#81FFFF",
-              backgroundColor: "rgba(129,255,255,0.08)",
-              fill: true,
-              tension: 0.3,
-              pointRadius: 2,
-            },
-            {
-              label: "Returned",
-              data: data.map((d) => d.returned),
-              borderColor: "#FFD598",
-              backgroundColor: "rgba(255,213,152,0.08)",
-              fill: true,
-              tension: 0.3,
-              pointRadius: 2,
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { labels: legend.labels }, tooltip },
-          scales: { x: xScale, y: yScale },
-        },
-      }),
+      this.#makeLine(
+        this.verdictTarget,
+        [
+          this.#ds(
+            "Approved",
+            data.map((d) => d.approved),
+            "#81FFFF",
+          ),
+          this.#ds(
+            "Returned",
+            data.map((d) => d.returned),
+            "#FFD598",
+          ),
+        ],
+        { scales: { x: this.cfg.xScale, y: yScale } },
+      ),
 
-      new Chart(this.rateTarget, {
-        type: "line",
-        data: {
-          labels,
-          datasets: [
-            {
-              label: "Rejection rate",
-              data: data.map((d) => {
-                const total = d.approved + d.returned;
-                return total > 0
-                  ? parseFloat(((d.returned / total) * 100).toFixed(1))
-                  : null;
-              }),
-              borderColor: "#FFE564",
-              backgroundColor: "rgba(255,229,100,0.08)",
-              fill: true,
-              tension: 0.3,
-              pointRadius: 2,
-              spanGaps: true,
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
+      this.#makeLine(
+        this.rateTarget,
+        [
+          this.#ds(
+            "Rejection rate",
+            data.map((d) => {
+              const total = d.approved + d.returned;
+              return total > 0
+                ? parseFloat(((d.returned / total) * 100).toFixed(1))
+                : null;
+            }),
+            "#FFE564",
+            0.08,
+            { spanGaps: true },
+          ),
+        ],
+        {
           plugins: {
-            legend: { labels: legend.labels },
+            legend: { labels: this.cfg.legend.labels },
             tooltip: {
               ...tooltip,
               callbacks: {
@@ -309,7 +267,7 @@ export default class extends Controller {
             },
           },
           scales: {
-            x: xScale,
+            x: this.cfg.xScale,
             y: {
               ...yScale,
               min: 0,
@@ -318,34 +276,25 @@ export default class extends Controller {
             },
           },
         },
-      }),
+      ),
 
-      new Chart(this.participationTarget, {
-        type: "line",
-        data: {
-          labels,
-          datasets: [
-            {
-              label: "Reviewers active",
-              data: data.map((d) => d.unique_reviewers),
-              borderColor: "#86efac",
-              backgroundColor: "rgba(134,239,172,0.1)",
-              fill: true,
-              tension: 0.3,
-              pointRadius: 2,
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { labels: legend.labels }, tooltip },
+      this.#makeLine(
+        this.participationTarget,
+        [
+          this.#ds(
+            "Reviewers active",
+            data.map((d) => d.unique_reviewers),
+            "#86efac",
+            0.1,
+          ),
+        ],
+        {
           scales: {
-            x: xScale,
+            x: this.cfg.xScale,
             y: { ...yScale, min: 0, ticks: { ...yScale.ticks, precision: 0 } },
           },
         },
-      }),
+      ),
     );
   }
 
@@ -439,39 +388,14 @@ export default class extends Controller {
         : `${count} reviewer${count !== 1 ? "s" : ""} selected`;
   }
 
-  initReviewerCharts({ xScale, yScale, legend, tooltip }) {
-    const labels = this.dataValue.map((d) => d.date);
-
-    const lineOpts = {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { labels: legend.labels }, tooltip },
-      scales: { x: xScale, y: { ...yScale, min: 0 } },
-    };
-
-    this.reviewerCharts = [
-      new Chart(this.reviewerDecisionsTarget, {
-        type: "line",
-        data: { labels, datasets: [] },
-        options: lineOpts,
-      }),
-      new Chart(this.reviewerReturnedTarget, {
-        type: "line",
-        data: { labels, datasets: [] },
-        options: lineOpts,
-      }),
-      new Chart(this.reviewerApprovedTarget, {
-        type: "line",
-        data: { labels, datasets: [] },
-        options: lineOpts,
-      }),
-      new Chart(this.reviewerRejectionsTarget, {
-        type: "line",
-        data: { labels, datasets: [] },
-        options: lineOpts,
-      }),
+  initReviewerCharts() {
+    const targets = [
+      this.reviewerDecisionsTarget,
+      this.reviewerReturnedTarget,
+      this.reviewerApprovedTarget,
+      this.reviewerRejectionsTarget,
     ];
-
+    this.reviewerCharts = targets.map((canvas) => this.#makeLine(canvas, []));
     this.charts.push(...this.reviewerCharts);
   }
 

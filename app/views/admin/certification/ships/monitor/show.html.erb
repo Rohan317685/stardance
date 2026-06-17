@@ -119,7 +119,7 @@
           <div class="ship-monitor__chart ship-monitor__chart--full">
             <div class="ship-monitor__chart-header">
               <p class="ship-monitor__chart-title">Queue size</p>
-              <span class="ship-monitor__chart-tip" data-tip="Pending ships at end of each day — all submissions not yet decided.">?</span>
+              <button type="button" class="ship-monitor__chart-tip" data-controller="tooltip" data-tooltip-message-value="Pending ships at end of each day — all submissions not yet decided." data-tooltip-position-value="bottom">?</button>
             </div>
             <div class="ship-monitor__chart-body">
               <canvas data-certification--ships--monitor-chart-target="queueSize"></canvas>
@@ -129,7 +129,7 @@
           <div class="ship-monitor__chart">
             <div class="ship-monitor__chart-header">
               <p class="ship-monitor__chart-title">Median wait</p>
-              <span class="ship-monitor__chart-tip" data-tip="Median hours from submission to verdict for ships decided that day. Half took longer, half shorter.">?</span>
+              <button type="button" class="ship-monitor__chart-tip" data-controller="tooltip" data-tooltip-message-value="Median hours from submission to verdict for ships decided that day. Half took longer, half shorter." data-tooltip-position-value="bottom">?</button>
             </div>
             <div class="ship-monitor__chart-body">
               <canvas data-certification--ships--monitor-chart-target="medianWait"></canvas>
@@ -139,7 +139,7 @@
           <div class="ship-monitor__chart">
             <div class="ship-monitor__chart-header">
               <p class="ship-monitor__chart-title">Waterline</p>
-              <span class="ship-monitor__chart-tip" data-tip="Decisions minus submissions per day. Above zero = queue shrinking. Below zero = queue growing.">?</span>
+              <button type="button" class="ship-monitor__chart-tip" data-controller="tooltip" data-tooltip-message-value="Decisions minus submissions per day. Above zero = queue shrinking. Below zero = queue growing." data-tooltip-position-value="bottom">?</button>
             </div>
             <div class="ship-monitor__chart-body">
               <canvas data-certification--ships--monitor-chart-target="net"></canvas>
@@ -149,7 +149,7 @@
           <div class="ship-monitor__chart">
             <div class="ship-monitor__chart-header">
               <p class="ship-monitor__chart-title">Throughput</p>
-              <span class="ship-monitor__chart-tip" data-tip="Total decisions made vs new ships submitted each day.">?</span>
+              <button type="button" class="ship-monitor__chart-tip" data-controller="tooltip" data-tooltip-message-value="Total decisions made vs new ships submitted each day." data-tooltip-position-value="bottom">?</button>
             </div>
             <div class="ship-monitor__chart-body">
               <canvas data-certification--ships--monitor-chart-target="throughput"></canvas>
@@ -159,7 +159,7 @@
           <div class="ship-monitor__chart">
             <div class="ship-monitor__chart-header">
               <p class="ship-monitor__chart-title">Verdicts</p>
-              <span class="ship-monitor__chart-tip" data-tip="Approvals and returns split by day.">?</span>
+              <button type="button" class="ship-monitor__chart-tip" data-controller="tooltip" data-tooltip-message-value="Approvals and returns split by day." data-tooltip-position-value="bottom">?</button>
             </div>
             <div class="ship-monitor__chart-body">
               <canvas data-certification--ships--monitor-chart-target="verdict"></canvas>
@@ -169,7 +169,7 @@
           <div class="ship-monitor__chart">
             <div class="ship-monitor__chart-header">
               <p class="ship-monitor__chart-title">Rejection rate</p>
-              <span class="ship-monitor__chart-tip" data-tip="Returns as a percentage of total decisions per day. Returns ÷ (approvals + returns) × 100.">?</span>
+              <button type="button" class="ship-monitor__chart-tip" data-controller="tooltip" data-tooltip-message-value="Returns as a percentage of total decisions per day. Returns ÷ (approvals + returns) × 100." data-tooltip-position-value="bottom">?</button>
             </div>
             <div class="ship-monitor__chart-body">
               <canvas data-certification--ships--monitor-chart-target="rate"></canvas>
@@ -179,7 +179,7 @@
           <div class="ship-monitor__chart">
             <div class="ship-monitor__chart-header">
               <p class="ship-monitor__chart-title">Active reviewers</p>
-              <span class="ship-monitor__chart-tip" data-tip="Distinct reviewers who made at least one decision that day.">?</span>
+              <button type="button" class="ship-monitor__chart-tip" data-controller="tooltip" data-tooltip-message-value="Distinct reviewers who made at least one decision that day." data-tooltip-position-value="bottom">?</button>
             </div>
             <div class="ship-monitor__chart-body">
               <canvas data-certification--ships--monitor-chart-target="participation"></canvas>
@@ -201,7 +201,7 @@
             <div class="ship-monitor__chart">
               <div class="ship-monitor__chart-header">
                 <p class="ship-monitor__chart-title">Decisions</p>
-                <span class="ship-monitor__chart-tip" data-tip="Total decisions (approvals + returns) per reviewer per day.">?</span>
+                <button type="button" class="ship-monitor__chart-tip" data-controller="tooltip" data-tooltip-message-value="Total decisions (approvals + returns) per reviewer per day." data-tooltip-position-value="bottom">?</button>
               </div>
               <div class="ship-monitor__chart-body">
                 <canvas data-certification--ships--monitor-chart-target="reviewerDecisions"></canvas>
@@ -211,7 +211,7 @@
             <div class="ship-monitor__chart">
               <div class="ship-monitor__chart-header">
                 <p class="ship-monitor__chart-title">Returns</p>
-                <span class="ship-monitor__chart-tip" data-tip="Ships returned for changes per reviewer per day.">?</span>
+                <button type="button" class="ship-monitor__chart-tip" data-controller="tooltip" data-tooltip-message-value="Ships returned for changes per reviewer per day." data-tooltip-position-value="bottom">?</button>
               </div>
               <div class="ship-monitor__chart-body">
                 <canvas data-certification--ships--monitor-chart-target="reviewerReturned"></canvas>
@@ -221,7 +221,7 @@
             <div class="ship-monitor__chart">
               <div class="ship-monitor__chart-header">
                 <p class="ship-monitor__chart-title">Approvals</p>
-                <span class="ship-monitor__chart-tip" data-tip="Ships approved per reviewer per day.">?</span>
+                <button type="button" class="ship-monitor__chart-tip" data-controller="tooltip" data-tooltip-message-value="Ships approved per reviewer per day." data-tooltip-position-value="bottom">?</button>
               </div>
               <div class="ship-monitor__chart-body">
                 <canvas data-certification--ships--monitor-chart-target="reviewerApproved"></canvas>
@@ -231,7 +231,7 @@
             <div class="ship-monitor__chart">
               <div class="ship-monitor__chart-header">
                 <p class="ship-monitor__chart-title">Rejections</p>
-                <span class="ship-monitor__chart-tip" data-tip="Ships rejected per reviewer per day.">?</span>
+                <button type="button" class="ship-monitor__chart-tip" data-controller="tooltip" data-tooltip-message-value="Ships rejected per reviewer per day." data-tooltip-position-value="bottom">?</button>
               </div>
               <div class="ship-monitor__chart-body">
                 <canvas data-certification--ships--monitor-chart-target="reviewerRejections"></canvas>

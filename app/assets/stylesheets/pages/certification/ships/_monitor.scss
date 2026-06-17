@@ -194,63 +194,6 @@
     }
   }
 
-  &__table-wrap {
-    background: var(--card-bg);
-    border: 1px solid var(--card-border);
-    border-radius: 12px;
-    overflow-x: auto;
-  }
-
-  &__table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.9rem;
-
-    thead th {
-      text-align: left;
-      padding: var(--space-s) var(--space-m);
-      font-size: 0.75rem;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: var(--muted);
-      border-bottom: 1px solid var(--card-border);
-      white-space: nowrap;
-    }
-
-    tbody td {
-      padding: var(--space-s) var(--space-m);
-      border-bottom: 1px solid var(--card-border);
-      vertical-align: middle;
-    }
-
-    tbody tr:last-child td {
-      border-bottom: 0;
-    }
-
-    tbody tr:hover {
-      background: rgba(255, 255, 255, 0.02);
-    }
-  }
-
-  &__cell-rank {
-    color: var(--muted);
-    font-size: 0.8rem;
-    width: 2rem;
-  }
-
-  &__cell-name {
-    font-weight: 600;
-  }
-
-  &__cell-num {
-    font-variant-numeric: tabular-nums;
-    text-align: right;
-
-    &--bold {
-      font-weight: 700;
-    }
-  }
-
   &__empty {
     background: var(--card-bg);
     border: 1px solid var(--card-border);
@@ -313,7 +256,6 @@
   }
 
   &__chart-tip {
-    position: relative;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -326,6 +268,8 @@
     font-weight: 700;
     color: rgba(255, 255, 255, 0.55);
     cursor: default;
+    background: none;
+    padding: 0;
     transition:
       border-color 0.15s,
       color 0.15s;
@@ -333,34 +277,6 @@
     &:hover {
       border-color: rgba(255, 255, 255, 0.75);
       color: #fff;
-    }
-
-    &::after {
-      content: attr(data-tip);
-      position: absolute;
-      top: calc(100% + 6px);
-      left: 50%;
-      transform: translateX(-50%);
-      width: 220px;
-      padding: 8px 10px;
-      background: #0d0b24;
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      border-radius: 8px;
-      font-size: 0.75rem;
-      font-weight: 400;
-      line-height: 1.5;
-      letter-spacing: 0;
-      text-transform: none;
-      color: rgba(255, 255, 255, 0.75);
-      white-space: normal;
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity 0.15s;
-      z-index: 50;
-    }
-
-    &:hover::after {
-      opacity: 1;
     }
   }
 
