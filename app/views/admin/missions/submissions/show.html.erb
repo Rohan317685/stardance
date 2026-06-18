@@ -1,0 +1,196 @@
+<% content_for :title, "Review: #{@submission.ship_event&.post&.project&.title}" %>
+
+<%
+  ship = @submission.ship_event
+  project = ship&.post&.project
+  builder = ship&.post&.user
+  policy_obj = policy(@submission)
+  can_review = policy_obj.review? && !policy_obj.try(:submitter_or_teammate?)
+%>
+
+<div class="app-layout app-layout--wide">
+  <div class="app-layout__main app-layout__main--wide mission-review">
+    <%= link_to "← back to queue", admin_mission_submissions_path(@mission.slug), class: "mission-review__back" %>
+
+    <% if @reviewed_today.zero? %>
+      <div class="mission-review__momentum">First review of the day. Let's go.</div>
+    <% else %>
+      <div class="mission-review__momentum">
+        <span class="mission-review__momentum-count"><%= @reviewed_today %></span>
+        reviewed today. Keep the momentum going.
+      </div>
+    <% end %>
+
+    <%# Mission context bar %>
+    <div class="mission-review__mission-bar">
+      <% if @mission.icon.attached? %>
+        <%= image_tag @mission.icon, alt: "", class: "mission-review__mission-icon" %>
+      <% end %>
+      <span class="mission-review__mission-name"><%= @mission.name %></span>
+      <% if @mission.fixed_stardust_payout&.positive? %>
+        <span class="mission-review__mission-stardust">
+          <%= stardust_icon %> <%= @mission.fixed_stardust_payout %>
+        </span>
+      <% end %>
+    </div>
+
+    <header class="mission-review__header">
+      <div class="mission-review__title">
+        <h1><%= project&.title || "—" %></h1>
+        <span class="status-pill status-pill--<%= @submission.status %>"><%= @submission.status.titleize %></span>
+      </div>
+      <span class="mission-review__id">#<%= @submission.id %></span>
+    </header>
+
+    <div class="mission-review__body">
+      <section class="mission-review__details">
+        <% if @mission.submission_guide.present? %>
+          <div class="mission-review__panel">
+            <details>
+              <summary><strong>Submission rubric</strong></summary>
+              <div class="mission-review__rubric-body">
+                <%= render MarkdownContentComponent.new(markdown: @mission.submission_guide, flavor: :guide) %>
+              </div>
+            </details>
+          </div>
+        <% end %>
+
+        <% if project %>
+          <div class="mission-review__panel">
+            <h2 class="mission-review__panel-title">Project</h2>
+            <% if project.description.present? %>
+              <p class="mission-review__description"><%= project.description %></p>
+            <% end %>
+            <dl class="mission-review__links">
+              <% if project.repo_url.present? %>
+                <dt>Repo</dt>
+                <dd><%= link_to project.repo_url, project.repo_url, target: "_blank", rel: "noopener" %></dd>
+              <% end %>
+              <% if project.demo_url.present? %>
+                <dt>Demo</dt>
+                <dd><%= link_to project.demo_url, project.demo_url, target: "_blank", rel: "noopener" %></dd>
+              <% end %>
+              <% if project.readme_url.present? %>
+                <dt>README</dt>
+                <dd><%= link_to project.readme_url, project.readme_url, target: "_blank", rel: "noopener" %></dd>
+              <% end %>
+              <dt>Project page</dt>
+              <dd><%= link_to project.title, project_path(project), target: "_blank", rel: "noopener" %></dd>
+            </dl>
+          </div>
+        <% end %>
+
+        <% if ship %>
+          <div class="mission-review__panel">
+            <h2 class="mission-review__panel-title">Ship message</h2>
+            <p><%= simple_format(ship.body.to_s) %></p>
+            <% if ship.review_instructions.present? %>
+              <h3>Review instructions</h3>
+              <p><%= simple_format(ship.review_instructions.to_s) %></p>
+            <% end %>
+          </div>
+        <% end %>
+
+        <% if @devlogs.any? %>
+          <div class="mission-review__panel">
+            <h2 class="mission-review__panel-title">Devlogs (<%= @devlogs.size %>)</h2>
+            <div class="mission-review__devlogs">
+              <% @devlogs.each do |devlog_post| %>
+                <div class="mission-review__devlog">
+                  <div class="mission-review__devlog-header">
+                    <span class="mission-review__devlog-author"><%= devlog_post.user&.display_name %></span>
+                    <span class="mission-review__devlog-time"><%= time_ago_in_words(devlog_post.created_at) %> ago</span>
+                  </div>
+                  <p class="mission-review__devlog-body"><%= simple_format(devlog_post.postable.body.to_s) %></p>
+                  <% if devlog_post.postable.respond_to?(:attachments) && devlog_post.postable.attachments.attached? %>
+                    <div class="mission-review__devlog-media">
+                      <% devlog_post.postable.attachments.each do |attachment| %>
+                        <% if attachment.image? %>
+                          <%= image_tag attachment, class: "mission-review__devlog-img" %>
+                        <% end %>
+                      <% end %>
+                    </div>
+                  <% end %>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+
+        <div class="mission-review__panel">
+          <h2 class="mission-review__panel-title">Submission</h2>
+          <dl class="mission-review__meta">
+            <dt>Builder</dt>
+            <dd><%= builder&.display_name || "—" %></dd>
+            <dt>Submitted</dt>
+            <dd><%= time_ago_in_words(@submission.created_at) %> ago</dd>
+            <dt>Payout path</dt>
+            <dd><%= @submission.payout_path.titleize %></dd>
+            <% if @submission.reviewed_by.present? %>
+              <dt>Reviewer</dt>
+              <dd><%= @submission.reviewed_by.display_name %></dd>
+            <% end %>
+            <% if @submission.submission_guide_acknowledged_at.present? %>
+              <dt>Guide acknowledged</dt>
+              <dd><%= @submission.submission_guide_acknowledged_at.strftime("%b %-d, %Y") %></dd>
+            <% end %>
+          </dl>
+        </div>
+
+        <% if @submission.rejection_message.present? %>
+          <div class="mission-review__panel mission-review__panel--rejection">
+            <h2 class="mission-review__panel-title">Rejection note</h2>
+            <p><%= @submission.rejection_message %></p>
+          </div>
+        <% end %>
+      </section>
+
+      <aside class="mission-review__sidebar">
+        <% if can_review && @submission.pending? && @submission.claim_held_by?(current_user) %>
+          <%= render "admin/missions/submissions/form", submission: @submission, mission: @mission %>
+        <% elsif can_review && @submission.pending? %>
+          <div class="mission-review__claim-prompt">
+            <p>You don't currently hold the claim on this review.</p>
+            <%= button_to "Claim this review",
+                  claim_admin_mission_submission_path(@mission.slug, @submission),
+                  method: :post,
+                  class: "action-btn action-btn--large action-btn--primary" %>
+            <%= link_to "Back to queue", admin_mission_submissions_path(@mission.slug),
+                  class: "action-btn action-btn--small action-btn--secondary" %>
+          </div>
+        <% elsif can_review && @submission.may_undo? %>
+          <div class="mission-review__claim-prompt">
+            <%= button_to "Undo decision",
+                  undo_admin_mission_submission_path(@mission.slug, @submission),
+                  method: :post,
+                  class: "action-btn action-btn--small action-btn--secondary" %>
+            <%= link_to "Back to queue", admin_mission_submissions_path(@mission.slug),
+                  class: "action-btn action-btn--small action-btn--secondary" %>
+          </div>
+        <% else %>
+          <div class="mission-review__claim-prompt">
+            <%= link_to "Back to queue", admin_mission_submissions_path(@mission.slug),
+                  class: "action-btn action-btn--small action-btn--secondary" %>
+          </div>
+        <% end %>
+      </aside>
+    </div>
+
+    <% if @versions.any? %>
+      <section class="mission-review__timeline">
+        <h2>Timeline</h2>
+        <ol class="mission-review__timeline-list">
+          <% @versions.each do |v| %>
+            <li class="mission-review__timeline-item">
+              <span class="mission-review__timeline-when"><%= v.created_at.strftime("%b %-d, %Y %H:%M") %></span>
+              <span class="mission-review__timeline-event"><%= v.event %></span>
+              <% if v.whodunnit.present? %>
+                <span class="mission-review__timeline-who">by <%= @whodunnit_users[v.whodunnit]&.display_name || "system" %></span>
+              <% end %>
+            </li>
+          <% end %>
+        </ol>
+      </section>
+    <% end %>
+  </div>
+</div>
