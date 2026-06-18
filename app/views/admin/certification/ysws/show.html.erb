@@ -80,7 +80,7 @@
       <section class="review-card video-card">
         <h3>Ship Cert Video</h3>
         <% if @review.ship_cert&.verdict_video&.attached? %>
-          <video class="video-card__player" src="<%= url_for(@review.ship_cert.verdict_video) %>"
+          <video class="video-card__player" src="<%= rails_storage_redirect_path(@review.ship_cert.verdict_video) %>"
                  controls playsinline preload="metadata" style="width:100%;border-radius:var(--profile-radius)"></video>
         <% else %>
           <div class="video-placeholder">
@@ -313,9 +313,9 @@
                   <div class="media-grid">
                     <% devlog_review.post_devlog.attachments.each do |attachment| %>
                       <% if attachment.video? %>
-                        <a href="<%= url_for(attachment) %>" class="media-item video-item" data-action="click->certification--ysws--media-viewer#open">
+                        <a href="<%= rails_storage_redirect_path(attachment) %>" class="media-item video-item" data-action="click->certification--ysws--media-viewer#open">
                           <video class="media-thumbnail" muted>
-                            <source src="<%= url_for(attachment) %>" type="<%= attachment.content_type %>">
+                            <source src="<%= rails_storage_redirect_path(attachment) %>" type="<%= attachment.content_type %>">
                           </video>
                           <div class="media-type-badge">Video</div>
                         </a>
