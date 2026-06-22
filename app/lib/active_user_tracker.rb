@@ -46,6 +46,8 @@ class ActiveUserTracker
       else
         0
       end
+    rescue RedisClient::ReadTimeoutError, Redis::TimeoutError, Redis::CannotConnectError
+      0
     end
 
     def scan_count(conn, pattern)
