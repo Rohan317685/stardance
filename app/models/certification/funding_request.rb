@@ -262,6 +262,7 @@ module Certification
       project.with_lock do
         case status.to_sym
         when :approved
+          project.advancing_via_funding_approval = true
           project.update!(hardware_stage: "build")
           accrue_discount_for_owner!
         when :returned
