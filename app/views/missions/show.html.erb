@@ -13,6 +13,10 @@
             <span class="mission-home__crumb-dot" aria-hidden="true">·</span>
             <%= link_to "Manage", edit_admin_mission_path(@mission.slug), class: "mission-home__crumb-link" %>
           <% end %>
+          <% if policy(@mission).manage? || current_user&.has_role?(:mission_reviewer) %>
+            <span class="mission-home__crumb-dot" aria-hidden="true">·</span>
+            <%= link_to "Review", admin_mission_submissions_path(@mission.slug), class: "mission-home__crumb-link" %>
+          <% end %>
         </span>
       </p>
 
@@ -148,7 +152,7 @@
 
         <%# Prizes card %>
         <% has_stardust = @mission.fixed_stardust_payout&.positive? %>
-        <% if @ordered_prizes.any? || has_stardust || @unlocked_missions.any? %>
+        <% if @ordered_prizes.any? || @shop_unlocks.any? || has_stardust || @unlocked_missions.any? %>
           <section class="mission-home__card mission-home__rewards"
                    aria-labelledby="mission-home-rewards">
             <h2 id="mission-home-rewards" class="mission-home__card-title">
@@ -189,8 +193,26 @@
                   </div>
                 </li>
               <% end %>
-              <% @unlocked_missions.each_with_index do |unlocked, idx| %>
+              <% @shop_unlocks.each_with_index do |shop_unlock, idx| %>
                 <% tone = tones[(tone_idx + @ordered_prizes.size + idx) % tones.length] %>
+                <li class="mission-home__prize mission-home__prize--<%= tone %>">
+                  <div class="mission-home__prize-tile">
+                    <% if shop_unlock.shop_item.respond_to?(:image) && shop_unlock.shop_item.image.respond_to?(:attached?) && shop_unlock.shop_item.image.attached? %>
+                      <%= image_tag shop_unlock.shop_item.image, alt: "", class: "mission-home__prize-img" %>
+                    <% else %>
+                      <svg viewBox="0 0 24 24" width="28" height="28" class="mission-home__prize-glyph" aria-hidden="true">
+                        <path d="M12 1.5 13.6 10.4 22.5 12 13.6 13.6 12 22.5 10.4 13.6 1.5 12 10.4 10.4Z" />
+                      </svg>
+                    <% end %>
+                  </div>
+                  <div class="mission-home__prize-body">
+                    <p class="mission-home__prize-title">Unlocks <%= link_to shop_unlock.shop_item.name, shop_item_path(shop_unlock.shop_item) %></p>
+                    <p class="mission-home__prize-blurb">Allows you to get <%= shop_unlock.shop_item.name %> from the shop!</p>
+                  </div>
+                </li>
+              <% end %>
+              <% @unlocked_missions.each_with_index do |unlocked, idx| %>
+                <% tone = tones[(tone_idx + @ordered_prizes.size + @shop_unlocks.size + idx) % tones.length] %>
                 <li class="mission-home__prize mission-home__prize--<%= tone %>">
                   <div class="mission-home__prize-tile">
                     <% if unlocked.icon.attached? %>

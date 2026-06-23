@@ -936,12 +936,9 @@ Rails.application.routes.draw do
   end
 
   # Reviewer queue.
-  resources :mission_submissions, only: [ :index, :show ] do
+  resources :mission_submissions, only: [] do
     member do
-      post :approve
-      post :reject
-      post :undo
-      get  :redeem
+      get :redeem
     end
   end
 
