@@ -506,6 +506,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_23_151542) do
 
   create_table "mission_submissions", force: :cascade do |t|
     t.bigint "chosen_prize_id"
+    t.datetime "claim_expires_at"
+    t.datetime "claimed_at"
     t.datetime "created_at", null: false
     t.datetime "deleted_at"
     t.bigint "mission_id", null: false
@@ -527,6 +529,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_23_151542) do
     t.index ["ship_event_id"], name: "index_mission_submissions_on_ship_event_id"
     t.index ["shop_order_id"], name: "index_mission_submissions_on_shop_order_id"
     t.index ["shop_order_id"], name: "index_mission_submissions_with_shop_order", where: "(shop_order_id IS NOT NULL)"
+    t.index ["status", "claim_expires_at"], name: "idx_mission_submissions_on_status_claim_expires"
     t.index ["status", "created_at"], name: "index_mission_submissions_on_status_and_created_at"
   end
 
@@ -638,11 +641,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_23_151542) do
   create_table "post_ship_events", force: :cascade do |t|
     t.string "body"
     t.string "certification_status", default: "pending"
+    t.integer "comments_count", default: 0, null: false
     t.datetime "created_at", null: false
     t.text "feedback_reason"
     t.string "feedback_video_url"
     t.float "hours_at_payout"
     t.float "hours_at_ship"
+    t.integer "likes_count", default: 0, null: false
     t.float "multiplier"
     t.decimal "originality_median", precision: 5, scale: 2
     t.decimal "originality_percentile", precision: 5, scale: 2

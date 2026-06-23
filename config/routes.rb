@@ -759,7 +759,17 @@ Rails.application.routes.draw do
       resource  :step_ordering,  only: [ :create ],                  controller: "missions/step_orderings"
       resources :prizes,         only: [ :create, :update, :destroy ], controller: "missions/prizes"
       resources :shop_unlocks,   only: [ :create, :destroy ],          controller: "missions/shop_unlocks"
+      resources :submissions,    only: [ :index, :show, :update ],     controller: "missions/submissions" do
+        collection do
+          get :next
+        end
+        member do
+          post :claim
+          post :undo
+        end
+      end
     end
+    get "mission_reviews", to: "missions/submissions#overview", as: :mission_reviews
 
     namespace :certification do
       # Reviewer stats & payout requests
@@ -860,6 +870,7 @@ Rails.application.routes.draw do
     resource :og_image, only: [ :show ], module: :projects, defaults: { format: :png }
     resource :ships, only: [ :create ], module: :projects
     resource :recertification, only: [ :create ], module: :projects
+    resource :mission_resubmission, only: [ :create ], module: :projects
     resource :funding_request, only: [ :create ], module: :projects
     resource :mission, only: [ :create, :destroy ], module: :projects, controller: "missions"
     resource :magic, only: [ :create, :destroy ], module: :projects, controller: "magic"
@@ -939,12 +950,9 @@ Rails.application.routes.draw do
   end
 
   # Reviewer queue.
-  resources :mission_submissions, only: [ :index, :show ] do
+  resources :mission_submissions, only: [] do
     member do
-      post :approve
-      post :reject
-      post :undo
-      get  :redeem
+      get :redeem
     end
   end
 
