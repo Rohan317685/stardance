@@ -25,12 +25,27 @@ module User::Funnel
     shipped
   ].freeze
 
+  included do
+    # Onboarding is the only funnel step recorded on the user record itself
+    # (the rest are separate records — see FunnelResyncTrigger). Push the user
+    # to the front of the Airtable sync queue when it flips.
+    after_update_commit :flag_for_resync!, if: :saved_change_to_onboarded_at?
+  end
+
   # Symbol of the furthest funnel step the user has reached (always at least
   # :signed_up, since every user has a created_at).
   def funnel_stage = current_funnel_step.first
 
   # When the user reached their current stage — i.e. when they got "stuck".
   def funnel_stage_entered_at = current_funnel_step.last
+
+  # Force this user to the front of the Airtable sync queue: records_to_sync
+  # orders by `synced_at ASC NULLS FIRST`, so nulling it makes the next
+  # UserSyncJob run pick them up ahead of the round-robin. Called whenever a
+  # funnel-advancing record is created (FunnelResyncTrigger) or onboarding
+  # completes, so a stage change can't sit stale long enough to mis-fire a
+  # re-engagement email. update_column = one cheap UPDATE, no callbacks.
+  def flag_for_resync! = update_column(:synced_at, nil)
 
   private
 
