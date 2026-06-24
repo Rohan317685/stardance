@@ -76,8 +76,7 @@ class Admin::Certification::ShipsController < Admin::Certification::ApplicationC
   end
 
   def report_fraud
-    skip_authorization
-    return head :forbidden unless current_user&.can_review?
+    authorize @ship
 
     report = ::Project::Report.new(
       project_id: @ship.project_id,
@@ -90,7 +89,12 @@ class Admin::Certification::ShipsController < Admin::Certification::ApplicationC
     if report.save
       render json: { success: true, message: "Report submitted successfully" }, status: :created
     else
-      render json: { success: false, errors: report.errors.full_messages }, status: :unprocessable_entity
+      errors = if report.errors.of_kind?(:reporter_id, :taken)
+        [ "This project has already been reported" ]
+      else
+        report.errors.full_messages
+      end
+      render json: { success: false, errors: errors }, status: :unprocessable_entity
     end
   rescue ActiveRecord::RecordNotUnique
     render json: { success: false, errors: [ "This project has already been reported" ] }, status: :unprocessable_entity
