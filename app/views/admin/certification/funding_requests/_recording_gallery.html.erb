@@ -1,8 +1,8 @@
-<%# Reusable video-gallery panel for the hardware funding review — shared by the
-    Lapse timelapses and Lookout recordings sections. Locals:
+<%# Reusable video-gallery panel for the hardware funding review. Locals:
       title:      panel heading
       empty_text: shown when items is blank
-      items:      array of { video_url:, poster_url:, processing:, name:, sub: } %>
+      items:      array of { video_url:, poster_url:, processing:, name:,
+                  duration: (seconds), recorded_at: (Time or nil) } %>
 <div class="ship-review__panel recording-gallery">
   <h2 class="ship-review__panel-title"><%= title %></h2>
 
@@ -26,7 +26,10 @@
           </div>
           <div class="recording-gallery__meta">
             <span class="recording-gallery__name"><%= item[:name] %></span>
-            <span class="recording-gallery__sub"><%= item[:sub] %></span>
+            <span class="recording-gallery__sub">
+              <%= [ format_clock(item[:duration]),
+                    (item[:recorded_at] && l(item[:recorded_at].to_date, format: :short)) ].compact.join(" · ") %>
+            </span>
           </div>
         </li>
       <% end %>
