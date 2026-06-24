@@ -644,6 +644,7 @@ Rails.application.routes.draw do
         resource :rejection, only: :create
       end
     end
+    resources :payout_reviews, only: [ :index, :show ]
     get "super_stars", to: "super_stars#show", as: :super_stars
     get "user-perms", to: "users#user_perms"
     resource :support, only: [ :show ], controller: "support/dashboards"
