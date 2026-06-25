@@ -1,7 +1,7 @@
 <% rated = mission.submissions_enter_rating? %>
+<% modal_id = "rating-info-modal-#{mission.id}" %>
+<% rewards = [] %>
 <% unless rated %>
-  <% modal_id = "rating-info-modal-#{mission.id}" %>
-  <% rewards = [] %>
   <% rewards << "#{mission.fixed_stardust_payout} stardust" if mission.fixed_stardust_payout&.positive? %>
   <% rewards += mission.prizes.includes(:shop_item).filter_map { |prize| prize.shop_item&.name } %>
 <% end %>
