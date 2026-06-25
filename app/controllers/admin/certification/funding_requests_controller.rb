@@ -45,8 +45,12 @@ class Admin::Certification::FundingRequestsController < Admin::Certification::Ap
     if @funding_request.update(funding_request_params)
       verb = @funding_request.approved? ? "Approved" : "Returned"
       count = ::Certification::FundingRequest.reviewed_today(current_user)
-      redirect_to next_admin_certification_funding_requests_path,
-                  notice: "#{verb} funding for “#{@funding_request.project.title}.” That's #{count} reviewed today. Keep going!"
+      notice = "#{verb} funding for “#{@funding_request.project.title}.” That's #{count} reviewed today. Keep going!"
+      if params[:redirect_to_hardware].present?
+        redirect_to admin_certification_hardware_review_path(@funding_request.project_id), notice: notice
+      else
+        redirect_to next_admin_certification_funding_requests_path, notice: notice
+      end
     else
       @reviewed_today = ::Certification::FundingRequest.reviewed_today(current_user)
       @lapse_timelapses = lapse_timelapses_for_review

@@ -802,6 +802,12 @@ Rails.application.routes.draw do
         end
       end
 
+      # Combined hardware review surface: one page per hardware project showing
+      # both the design (funding) and build (ship) review stages. Verdicts and
+      # claims reuse the funding/ship endpoints above (they redirect back here
+      # when given a redirect_to_hardware param), so this controller is read-only.
+      resources :hardware_reviews, path: "hardware", param: :project_id, only: [ :show ]
+
       resources :devlog_reviews, only: [ :update ]
 
       get "devlogs/:devlog_id/commits", to: "devlog_commits#index", as: "devlog_commits"

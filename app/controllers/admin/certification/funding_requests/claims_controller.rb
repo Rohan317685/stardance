@@ -11,9 +11,10 @@ class Admin::Certification::FundingRequests::ClaimsController < Admin::Certifica
     ::Certification::FundingRequest.release_all_for(current_user)
     claimed = ::Certification::FundingRequest.atomic_claim!(@funding_request.id, current_user)
     if claimed
-      redirect_to admin_certification_funding_request_path(claimed)
+      redirect_to hardware_redirect? ? hardware_review_path : admin_certification_funding_request_path(claimed)
     else
-      redirect_to admin_certification_funding_requests_path, alert: "Couldn't claim that review, someone else got it"
+      redirect_to hardware_redirect? ? hardware_review_path : admin_certification_funding_requests_path,
+                  alert: "Couldn't claim that review, someone else got it"
     end
   end
 
@@ -22,12 +23,23 @@ class Admin::Certification::FundingRequests::ClaimsController < Admin::Certifica
     authorize @funding_request, policy_class: Admin::Certification::FundingRequests::ClaimPolicy
 
     @funding_request.release_claim!
-    redirect_to admin_certification_funding_requests_path, notice: "Unclaimed funding review for “#{@funding_request.project.title}.”"
+    redirect_to hardware_redirect? ? hardware_review_path : admin_certification_funding_requests_path,
+                notice: "Unclaimed funding review for “#{@funding_request.project.title}.”"
   end
 
   private
 
   def set_funding_request
     @funding_request = ::Certification::FundingRequest.find(params[:funding_request_id])
+  end
+
+  # The combined hardware review page claims through this controller and wants
+  # the reviewer sent back to it rather than to the funding queue.
+  def hardware_redirect?
+    params[:redirect_to_hardware].present?
+  end
+
+  def hardware_review_path
+    admin_certification_hardware_review_path(@funding_request.project_id)
   end
 end

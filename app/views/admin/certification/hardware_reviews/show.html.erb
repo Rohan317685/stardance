@@ -1,0 +1,236 @@
+<% content_for :title, "Hardware review: #{@project.title}" %>
+
+<%
+  design = @funding_request
+  design_can_review = design&.claim_held_by?(current_user) && design.pending?
+  build_can_review = @ship&.claim_held_by?(current_user) && @ship.pending?
+%>
+
+<div class="app-layout app-layout--wide"
+     data-controller="certification--queue"
+     data-certification--queue-server-now-value="<%= Time.current.iso8601 %>">
+  <div class="app-layout__main app-layout__main--wide ship-review hardware-review">
+    <%= link_to "← back to admin", admin_root_path, class: "ship-review__back" %>
+
+    <div class="ship-review__momentum" role="status" aria-live="polite">
+      <% if @reviewed_today.zero? %>
+        <span class="ship-review__momentum-label">First hardware review of the day. Let's go.</span>
+      <% else %>
+        <span class="ship-review__momentum-count"><%= @reviewed_today %></span>
+        <span class="ship-review__momentum-label">hardware reviews today. Keep the momentum going.</span>
+      <% end %>
+    </div>
+
+    <header class="ship-review__header">
+      <div class="ship-review__title">
+        <h1><%= @project.title %></h1>
+        <span class="hardware-review__tag">Hardware · <%= @project.hardware_stage&.capitalize %></span>
+      </div>
+      <span class="ship-review__id">#<%= @project.id %></span>
+    </header>
+
+    <%# Big, unmistakable signal of which review the reviewer is doing right now. %>
+    <% case @active_stage %>
+    <% when :design %>
+      <div class="hardware-review__banner hardware-review__banner--design">
+        <span class="hardware-review__banner-eyebrow">You're reviewing</span>
+        <span class="hardware-review__banner-stage">① Design — funding &amp; grant</span>
+      </div>
+    <% when :build %>
+      <div class="hardware-review__banner hardware-review__banner--build">
+        <span class="hardware-review__banner-eyebrow">You're reviewing</span>
+        <span class="hardware-review__banner-stage">② Build — ship</span>
+      </div>
+    <% else %>
+      <div class="hardware-review__banner hardware-review__banner--idle">
+        <span class="hardware-review__banner-stage">Nothing is pending review on this project right now.</span>
+      </div>
+    <% end %>
+
+    <div class="hardware-review__stages">
+      <%# ───────────── Stage 1 · Design review (funding) ───────────── %>
+      <section class="<%= class_names("hardware-review__stage", "hardware-review__stage--design",
+            "hardware-review__stage--active" => @active_stage == :design,
+            "hardware-review__stage--inactive" => @active_stage.present? && @active_stage != :design) %>">
+        <div class="hardware-review__stage-head">
+          <span class="hardware-review__stage-num">1</span>
+          <h2 class="hardware-review__stage-title">Design review</h2>
+          <span class="hardware-review__stage-kind">Funding · grant</span>
+          <% if design %>
+            <span class="status-pill status-pill--<%= design.status %>"><%= design.status.capitalize %></span>
+          <% end %>
+        </div>
+
+        <% if design.nil? %>
+          <p class="hardware-review__empty">
+            Started at build — the builder skipped the design stage and isn't requesting a grant.
+          </p>
+        <% else %>
+          <dl class="ship-review__meta">
+            <dt>Complexity tier</dt>
+            <dd><%= design.tier_label %>: <%= design.tier_examples %> (max $<%= design.tier_max_dollars %>)</dd>
+            <dt>Requested</dt>
+            <dd>$<%= design.requested_amount_dollars %></dd>
+            <% if design.approved_amount_cents.present? %>
+              <dt>Approved</dt>
+              <dd>$<%= design.approved_amount_dollars %></dd>
+            <% end %>
+            <dt>Submitted</dt>
+            <dd><%= time_ago_in_words(design.created_at) %> ago</dd>
+            <% if design.reviewer %>
+              <dt>Reviewer</dt>
+              <dd><%= design.reviewer.display_name %></dd>
+            <% end %>
+          </dl>
+
+          <% if design.pending? %>
+            <% if design_can_review %>
+              <%= render "admin/certification/funding_requests/form", funding_request: design, redirect_to_hardware: true %>
+            <% else %>
+              <div class="ship-review__claim">
+                <p>You don't hold the claim on this design review.</p>
+                <%= button_to "Claim design review", admin_certification_funding_request_claim_path(design),
+                      method: :post, params: { redirect_to_hardware: @project.id },
+                      class: "action-btn action-btn--large action-btn--primary" %>
+              </div>
+            <% end %>
+          <% else %>
+            <div class="ship-review__verdict-card">
+              <div class="ship-review__verdict-outcome">
+                <span class="status-pill status-pill--<%= design.status %>"><%= design.status.capitalize %></span>
+                <% if design.approved? %>
+                  <span class="hardware-review__grant">Grant offered: $<%= design.final_amount_dollars %></span>
+                <% end %>
+              </div>
+              <% if design.feedback.present? %>
+                <div class="ship-review__verdict-feedback">
+                  <h3>Feedback</h3>
+                  <p><%= design.feedback %></p>
+                </div>
+              <% end %>
+            </div>
+          <% end %>
+        <% end %>
+      </section>
+
+      <%# ───────────── Stage 2 · Build review (ship) ───────────── %>
+      <section class="<%= class_names("hardware-review__stage", "hardware-review__stage--build",
+            "hardware-review__stage--active" => @active_stage == :build,
+            "hardware-review__stage--inactive" => @active_stage.present? && @active_stage != :build) %>">
+        <div class="hardware-review__stage-head">
+          <span class="hardware-review__stage-num">2</span>
+          <h2 class="hardware-review__stage-title">Build review</h2>
+          <span class="hardware-review__stage-kind">Ship · certification</span>
+          <% if @ship %>
+            <span class="status-pill status-pill--<%= @ship.status %>"><%= @ship.status.capitalize %></span>
+          <% end %>
+        </div>
+
+        <% if @ship.nil? %>
+          <p class="hardware-review__empty">
+            <% if @project.build_stage? %>
+              In the build stage — not shipped yet. There's nothing to review here until the builder ships.
+            <% else %>
+              Still in design — this project hasn't reached the build stage yet.
+            <% end %>
+          </p>
+        <% else %>
+          <dl class="ship-review__meta">
+            <dt>Submitted</dt>
+            <dd><%= time_ago_in_words(@project.shipped_at || @ship.created_at) %> ago</dd>
+            <% if @ship.reviewer %>
+              <dt>Reviewer</dt>
+              <dd><%= @ship.reviewer.display_name %></dd>
+            <% end %>
+            <% if @project.update_description.present? %>
+              <dt>Update</dt>
+              <dd><%= @project.update_description %></dd>
+            <% end %>
+            <dt>Build progress</dt>
+            <dd>
+              <%= pluralize(@project.devlogs.build_phase.where(deleted_at: nil).count, "build devlog") %>
+              · <%= @project.total_ship_hours.round(1) %>h shipped
+            </dd>
+          </dl>
+
+          <% if @ship.pending? %>
+            <% if build_can_review %>
+              <%= render "admin/certification/ships/form", ship: @ship, can_review: build_can_review, redirect_to_hardware: true %>
+            <% else %>
+              <div class="ship-review__claim">
+                <p>You don't hold the claim on this build review.</p>
+                <%= button_to "Claim build review", admin_certification_ship_claim_path(@ship),
+                      method: :post, params: { redirect_to_hardware: @project.id },
+                      class: "action-btn action-btn--large action-btn--primary" %>
+              </div>
+            <% end %>
+          <% else %>
+            <div class="ship-review__verdict-card">
+              <div class="ship-review__verdict-outcome">
+                <span class="status-pill status-pill--<%= @ship.status %>"><%= @ship.status.capitalize %></span>
+              </div>
+              <% if @ship.feedback.present? %>
+                <div class="ship-review__verdict-feedback">
+                  <h3>Feedback</h3>
+                  <p><%= @ship.feedback %></p>
+                </div>
+              <% end %>
+              <% if @ship.verdict_video.attached? %>
+                <div class="ship-review__verdict-video">
+                  <h3>Walkthrough video</h3>
+                  <video controls playsinline class="ship-review__video-player">
+                    <source src="<%= url_for(@ship.verdict_video) %>" type="<%= @ship.verdict_video.content_type %>">
+                    Your browser does not support the video tag.
+                  </video>
+                </div>
+              <% end %>
+            </div>
+          <% end %>
+        <% end %>
+      </section>
+    </div>
+
+    <%# ───────────── Shared evidence for both stages ───────────── %>
+    <div class="ship-review__body">
+      <section class="ship-review__details">
+        <%= render "admin/certification/funding_requests/recordings",
+              timelapses: @lapse_timelapses, recordings: @lookout_recordings %>
+
+        <div class="ship-review__panel">
+          <h2 class="ship-review__panel-title">Links</h2>
+          <dl class="ship-review__links">
+            <% if @project.repo_url.present? %>
+              <dt>Repo</dt>
+              <dd><%= link_to @project.repo_url, @project.repo_url, target: "_blank", rel: "noopener" %></dd>
+            <% end %>
+            <% if @project.demo_url.present? %>
+              <dt>Demo</dt>
+              <dd><%= link_to @project.demo_url, @project.demo_url, target: "_blank", rel: "noopener" %></dd>
+            <% end %>
+            <dt>Project</dt>
+            <dd><%= link_to "View project page", project_path(@project), target: "_blank", rel: "noopener" %></dd>
+          </dl>
+        </div>
+
+        <% if @project.description.present? %>
+          <div class="ship-review__panel">
+            <h2 class="ship-review__panel-title">Description</h2>
+            <p class="ship-review__description"><%= @project.description %></p>
+          </div>
+        <% end %>
+      </section>
+
+      <aside class="ship-review__sidebar">
+        <div class="ship-review__panel">
+          <h2 class="ship-review__panel-title">Builder</h2>
+          <dl class="ship-review__meta">
+            <dt>Owner</dt>
+            <dd><%= @owner&.display_name || "—" %></dd>
+            <dt>Current stage</dt>
+            <dd><%= @project.hardware_stage&.capitalize %></dd>
+          </dl>
+        </div>
+      </aside>
+    </div>
+  </div>
+</div>
